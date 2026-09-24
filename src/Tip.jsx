@@ -1,4 +1,4 @@
-import { cloneElement, useLayoutEffect, useRef, useState } from 'react'
+import { cloneElement, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { RARITIES, SHINY_MULT, abilityText, dropShare, itemIncome, rankInfo, rarityClass, starsText } from './data'
 import { formatNum } from './game'
@@ -35,25 +35,83 @@ function Popover({ rect, children }) {
   )
 }
 
+const HANDLER_NAMES = ['onPointerEnter', 'onPointerLeave', 'onFocus', 'onBlur', 'onPointerDown', 'onPointerUp', 'onPointerCancel', 'onClickCapture', 'onContextMenu']
+const LONG_PRESS_MS = 450 // appui long (tactile) qui affiche l'infobulle
+const TOUCH_SHOW_MS = 2800 // durée d'affichage de l'infobulle sur écran tactile
+
 // Infobulle au style de l'app. Sans `wrap`, elle s'attache directement à l'enfant ;
 // avec `wrap`, elle l'entoure d'un <span> (utile pour un bouton désactivé, qui ne reçoit pas la souris).
+//
+// Souris : survol. Clavier : focus (visible). Écran tactile : appui long — un simple appui n'affiche rien
+// (sinon l'infobulle surgirait à chaque clic sur un bouton), sauf sur un bouton désactivé, où il explique pourquoi.
 export default function Tip({ content, children, wrap = false, className = '' }) {
   const [rect, setRect] = useState(null)
-  const show = (e) => setRect(e.currentTarget.getBoundingClientRect())
-  const hide = () => setRect(null)
+  // état mutable propre à ce composant (minuteries, drapeau d'appui long) : il ne provoque jamais de nouveau rendu
+  const [touch] = useState(() => ({
+    press: null, // minuterie de l'appui long
+    autoHide: null, // minuterie de masquage automatique (tactile)
+    longPressed: false, // l'infobulle vient d'être ouverte par un appui long : le clic qui suit est ignoré
+  }))
+
+  useEffect(
+    () => () => {
+      clearTimeout(touch.press)
+      clearTimeout(touch.autoHide)
+    },
+    [touch],
+  )
+
+  const show = (el) => setRect(el.getBoundingClientRect())
+  const hide = () => {
+    clearTimeout(touch.press)
+    clearTimeout(touch.autoHide)
+    setRect(null)
+  }
+  const showThenHide = (el) => {
+    show(el)
+    clearTimeout(touch.autoHide)
+    touch.autoHide = setTimeout(() => setRect(null), TOUCH_SHOW_MS)
+  }
+
+  const handlers = {
+    onPointerEnter: (e) => e.pointerType === 'mouse' && show(e.currentTarget),
+    onPointerLeave: (e) => e.pointerType === 'mouse' && hide(),
+    // le focus n'affiche l'infobulle que pour la navigation au clavier (pas après un simple clic ou appui)
+    onFocus: (e) => e.target.matches?.(':focus-visible') && show(e.currentTarget),
+    onBlur: hide,
+    onPointerDown: (e) => {
+      touch.longPressed = false
+      if (e.pointerType === 'mouse') return hide()
+      hide()
+      const el = e.currentTarget
+      touch.press = setTimeout(() => {
+        touch.longPressed = true
+        showThenHide(el)
+      }, LONG_PRESS_MS)
+    },
+    onPointerUp: (e) => {
+      if (e.pointerType === 'mouse') return
+      clearTimeout(touch.press)
+      // simple appui sur un bouton désactivé : on affiche pourquoi il ne fait rien
+      if (!touch.longPressed && e.currentTarget.querySelector?.('button:disabled')) showThenHide(e.currentTarget)
+    },
+    onPointerCancel: () => clearTimeout(touch.press),
+    // après un appui long, on n'exécute pas l'action du bouton (le doigt qui se lève ne doit rien déclencher)
+    onClickCapture: (e) => {
+      if (touch.longPressed) {
+        e.stopPropagation()
+        e.preventDefault()
+        touch.longPressed = false
+      }
+    },
+    onContextMenu: (e) => touch.longPressed && e.preventDefault(),
+  }
   const popover = rect && content ? <Popover rect={rect}>{content}</Popover> : null
 
   if (wrap) {
     return (
       <>
-        <span
-          className={`tip-wrap ${className}`}
-          onMouseEnter={show}
-          onMouseLeave={hide}
-          onFocus={show}
-          onBlur={hide}
-          onPointerDown={hide}
-        >
+        <span className={`tip-wrap ${className}`} {...handlers}>
           {children}
         </span>
         {popover}
@@ -62,19 +120,16 @@ export default function Tip({ content, children, wrap = false, className = '' })
   }
 
   const p = children.props
-  const chain = (own, fn) => (e) => {
-    own?.(e)
-    fn(e)
+  const merged = {}
+  for (const name of HANDLER_NAMES) {
+    merged[name] = (e) => {
+      p[name]?.(e)
+      handlers[name](e)
+    }
   }
   return (
     <>
-      {cloneElement(children, {
-        onMouseEnter: chain(p.onMouseEnter, show),
-        onMouseLeave: chain(p.onMouseLeave, hide),
-        onFocus: chain(p.onFocus, show),
-        onBlur: chain(p.onBlur, hide),
-        onPointerDown: chain(p.onPointerDown, hide),
-      })}
+      {cloneElement(children, merged)}
       {popover}
     </>
   )

@@ -594,3 +594,8 @@ html, body, * { scrollbar-width: none !important; -ms-overflow-style: none; }
 *::-webkit-scrollbar, html::-webkit-scrollbar { display: none !important; width: 0; height: 0; }
 /* la zone des résultats d'un lot est plus haute pour éviter de devoir défiler */
 .multi-body { max-height: min(62vh, 560px); }
+
+/* un bouton désactivé dans une infobulle laisse passer les gestes au conteneur (sinon certains navigateurs les ignorent) */
+.tip-wrap > button:disabled { pointer-events: none; }
+/* pas de menu contextuel ni de sélection lors d'un appui long sur un élément tactile */
+.tip-wrap, .stat, .slot, .card, .tab { -webkit-touch-callout: none; }
