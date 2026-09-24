@@ -93,7 +93,8 @@ export default function Tip({ content, children, wrap = false, className = '' })
       if (e.pointerType === 'mouse') return
       clearTimeout(touch.press)
       // simple appui sur un bouton désactivé : on affiche pourquoi il ne fait rien
-      if (!touch.longPressed && e.currentTarget.querySelector?.('button:disabled')) showThenHide(e.currentTarget)
+      // (on regarde le bouton réellement touché, pas n'importe quel bouton désactivé du conteneur)
+      if (!touch.longPressed && e.target.closest?.('button')?.disabled) showThenHide(e.currentTarget)
     },
     onPointerCancel: () => clearTimeout(touch.press),
     // après un appui long, on n'exécute pas l'action du bouton (le doigt qui se lève ne doit rien déclencher)
