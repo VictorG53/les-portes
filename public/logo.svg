@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Les Portes">
+  <rect width="64" height="64" rx="15" fill="#1e1712"/>
+  <!-- halo de lumière derrière la porte -->
+  <circle cx="34" cy="34" r="22" fill="#ffc94d" opacity=".12"/>
+  <!-- cadre en laiton -->
+  <path d="M14 55V29C14 19.6 22.1 12 32 12s18 7.6 18 17v26z" fill="#ffc94d"/>
+  <!-- ouverture éclairée -->
+  <path d="M18.500 55V29.500C18.500 22.100 24.500 16.500 32 16.500s13.500 5.600 13.500 13V55z" fill="#fff0bd"/>
+  <!-- rayons de lumière sur le sol -->
+  <path d="M28 55l17-9v9z" fill="#ffc94d" opacity=".55"/>
+  <!-- battant ouvert (terracotta) -->
+  <path d="M18.500 55V29.500c0-4.900 2.600-8.900 6.500-11.300L31 21v29z" fill="#d0552b"/>
+  <path d="M18.500 55V29.500c0-4.900 2.600-8.900 6.500-11.300L26 19v33z" fill="#a8401d"/>
+  <!-- poignée -->
+  <circle cx="28.500" cy="37" r="1.700" fill="#ffc94d"/>
+  <!-- étincelle -->
+  <path d="M46 9l1.400 3.600L51 14l-3.600 1.400L46 19l-1.400-3.600L41 14l3.600-1.400z" fill="#fff0bd"/>
+</svg>
