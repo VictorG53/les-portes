@@ -62,7 +62,7 @@ import { ACHIEVEMENTS } from './achievements'
 import Tip, { ItemTip, Text } from './Tip'
 import { play } from './sound'
 import Settings from './Settings'
-import { applySettings, loadSettings, saveSettings } from './settings'
+import { applySettings, loadSettings, saveSettings } from './settingsStore'
 import { clearGame, loadGame, saveGame } from './save'
 
 

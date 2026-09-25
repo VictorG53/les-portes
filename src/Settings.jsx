@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { DEFAULT_SETTINGS } from './settings'
+import { DEFAULT_SETTINGS } from './settingsStore'
 import { formatNumMode } from './game'
 import { play } from './sound'
 
