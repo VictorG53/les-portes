@@ -120,19 +120,18 @@ export default function DoorArt({ id, hidden = false, opening = false }) {
 
   return (
     <div className="door-art" aria-hidden="true">
-      {/* cadre et pièce derrière la porte */}
-      <svg className="door-base" viewBox="0 0 64 88" width="64" height="88">
-        <path d={OPENING} fill={art.room} />
-        <path d={`${FRAME}${OPENING}`} fill={art.frame} fillRule="evenodd" />
-        <rect x="29" y="0" width="6" height="7" rx="1" fill="#fff" opacity=".2" />
-      </svg>
+      {/* pièce derrière la porte : même mécanisme de découpe (clip-path CSS) que le battant, pour qu'ils restent
+          pixel-parfaitement superposés à toute échelle (un mélange SVG + clip-path CSS créait un liseré au redimensionnement) */}
+      <div className="door-room" style={{ clipPath: `path('${OPENING}')`, background: art.room }} />
+      <div className="door-frame" style={{ clipPath: `path(evenodd, '${FRAME}${OPENING}')`, background: art.frame }} />
+      <div className="door-hinge-top" />
       {/* battant */}
       <motion.div
         className={`door-leaf ${art.rainbow ? 'rainbow-fill' : art.mono ? 'mono-fill' : ''}`}
         style={{ clipPath: `path('${OPENING}')`, background: art.rainbow || art.mono ? undefined : art.leaf, transformOrigin: '6px 50%' }}
         animate={leafAnimation}
       >
-        <svg viewBox="0 0 64 88" width="64" height="88">
+        <svg viewBox="0 0 64 88" width="100%" height="100%">
           {art.details}
         </svg>
       </motion.div>

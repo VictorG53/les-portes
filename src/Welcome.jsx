@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { formatNum } from './game'
 import { play } from './sound'
@@ -14,8 +13,11 @@ function duration(sec) {
 
 // écran affiché au retour du joueur : récapitulatif du gain hors ligne
 export default function Welcome({ seconds, gain, rate, capHours, onClose }) {
-  useEffect(() => play('sell'), [])
   const capped = seconds > capHours * 3600
+  const close = () => {
+    play('sell')
+    onClose()
+  }
 
   return (
     <motion.div
@@ -23,7 +25,7 @@ export default function Welcome({ seconds, gain, rate, capHours, onClose }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      onClick={onClose}
+      onClick={close}
     >
       <motion.div
         className="reveal welcome"
@@ -41,7 +43,7 @@ export default function Welcome({ seconds, gain, rate, capHours, onClose }) {
           {+capHours.toFixed(1)} h d'absence.
           {capped && ' Le reste de ton absence n’a pas été compté.'}
         </div>
-        <button className="btn" onClick={onClose}>
+        <button className="btn" onClick={close}>
           Récupérer
         </button>
       </motion.div>

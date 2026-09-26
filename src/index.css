@@ -86,12 +86,10 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px 20px 8px; display: flex;
 .equip-recap-col { flex: 1; min-width: 240px; }
 .equip-recap .section-head { margin-bottom: 10px; }
 .equip-recap .section-head h3 { font-size: 1rem; }
-.mini-slots { display: flex; flex-wrap: wrap; gap: 6px; }
+.mini-slots { display: flex; flex-wrap: wrap; gap: 8px; }
 .mini-slots:empty::before { content: ''; }
-.slot.mini { width: 60px; height: 66px; border-radius: 10px; cursor: default; gap: 2px; }
+.slot.mini { cursor: default; }
 .slot.mini:hover { background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
-.slot.mini .emoji { font-size: 1.3rem; }
-.slot.mini small { font-size: .6rem; }
 
 /* ---------- réserve ---------- */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
@@ -321,7 +319,7 @@ footer { text-align: center; padding: 28px 0 32px; }
 .door-row:not(.poor):not(.hidden-door):hover { border-color: var(--line-strong); }
 .door-row.poor .door-mini, .door-row.poor .door-name, .door-row.poor .door-odds { opacity: .55; }
 .door-row.hidden-door { opacity: .6; border-style: dashed; }
-.door-mini { background: var(--surface-2); border: 0; border-radius: 10px; height: 76px; width: 64px; display: grid; place-items: center; perspective: 300px; padding: 0; }
+.door-mini { background: var(--surface-2); border: 0; border-radius: 10px; height: 76px; width: 64px; display: flex; align-items: center; justify-content: center; perspective: 300px; padding: 0; }
 .door-mini:disabled { cursor: not-allowed; }
 .door-mini:not(:disabled):hover .frame { transform: translateY(-2px); }
 .hidden-door .room { background: #1a1612; }
@@ -334,15 +332,17 @@ footer { text-align: center; padding: 28px 0 32px; }
 .odds-top b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .door-price { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .door-price .muted { font-size: .72rem; }
-.door-row .open-btn { width: 100%; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.door-row .open-btn .btn-price { font-weight: 600; font-size: .82em; opacity: .85; font-variant-numeric: tabular-nums; }
+.door-row .open-btn { width: 100%; margin: 0; padding: 5px 10px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.door-row .open-btn .btn-label { font-size: .88em; white-space: nowrap; }
+.door-row .open-btn .btn-price { font-weight: 600; font-size: .68em; opacity: .8; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .door-row .tip-wrap { width: 100%; }
 .tt-odds { display: flex; align-items: center; gap: 8px; font-size: .78rem; }
 .tt-odds i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .tt-odds b { margin-left: auto; padding-left: 14px; font-variant-numeric: tabular-nums; }
 @media (max-width: 900px) {
   .door-row { grid-template-columns: 76px 1fr 155px; grid-template-areas: 'icon name btn' 'icon odds odds' 'icon price price'; gap: 6px 14px; }
-  .door-row > .door-mini { grid-area: icon; }
+  .door-row > .door-mini { grid-area: icon; align-self: center; }
+  .door-art { transform: scale(.78); }
   .door-row > .door-name { grid-area: name; }
   .door-row > .tip-wrap, .door-row > .open-btn { grid-area: btn; width: 100%; }
   .door-row > .door-odds { grid-area: odds; }
@@ -379,8 +379,9 @@ main { max-width: 1320px; padding: 24px 24px 48px; gap: 32px; }
 /* portes : colonnes ajustées à la colonne principale (téléphone étroit) */
 @media (max-width: 760px) {
   .door-row { grid-template-columns: 56px 1fr 135px; gap: 6px 14px; padding: 10px 14px; }
-  .door-mini { width: 56px; height: 72px; }
-  .door-row .open-btn { padding: 10px 8px; }
+  .door-mini { width: 52px; height: 66px; }
+  .door-art { transform: scale(.68); }
+  .door-row .open-btn { padding: 4px 8px; }
 }
 
 /* cartes de la réserve : plus compactes */
@@ -473,9 +474,10 @@ main > .cols, main > section { animation: tab-in .2s ease-out; }
   .door-mini { width: 76px; height: 100px; }
 }
 .door-mini { border-radius: 12px; perspective: 500px; background: var(--surface-2); }
-.door-art { position: relative; width: 64px; height: 88px; transition: transform .15s, filter .15s; }
-.door-base, .door-leaf { position: absolute; inset: 0; display: block; }
+.door-art { position: relative; width: 64px; height: 88px; flex: none; transition: transform .15s, filter .15s; }
+.door-room, .door-frame, .door-leaf { position: absolute; inset: 0; display: block; }
 .door-leaf { backface-visibility: hidden; }
+.door-hinge-top { position: absolute; top: 0; left: 45.3%; width: 9.4%; height: 8%; background: #fff; opacity: .2; border-radius: 1px; }
 .door-mini:not(:disabled):hover .door-art { transform: translateY(-2px); filter: brightness(1.12); }
 
 /* ---------- page de statistiques ---------- */

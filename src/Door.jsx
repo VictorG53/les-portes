@@ -135,7 +135,8 @@ export default function Door({
         }
       >
         <button className="btn open-btn" data-tour={tour} disabled={disabled || !affordable} onClick={onOpen}>
-          {count > 1 ? `Ouvrir ×${count}` : 'Ouvrir'} <span className="btn-price">🪙 {formatNum(totalCost)}</span>
+          <span className="btn-label">{count > 1 ? `Ouvrir ×${count}` : 'Ouvrir'}</span>
+          <span className="btn-price">🪙 {formatNum(totalCost)}</span>
         </button>
       </Tip>
     </div>
