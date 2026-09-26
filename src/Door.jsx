@@ -8,7 +8,7 @@ const TOP_ODDS = 3
 
 // une porte : une ligne compacte (illustration, nom, probabilités, prix, bouton)
 export default function Door({
-  door, price, luck, discount, scale = 1, shinyChance, gold, count, tour,
+  door, price, luck, discount, scale = 1, shinyChance, gold, count, tour, rowTour,
   opening, disabled, hidden, onOpen,
 }) {
   const totalCost = price * count
@@ -26,7 +26,7 @@ export default function Door({
   // porte lointaine : silhouette « ??? » avec le prix à atteindre
   if (hidden) {
     return (
-      <div className="door-row hidden-door">
+      <div className="door-row hidden-door" data-tour={rowTour}>
         <div className="door-mini">
           <DoorArt hidden />
         </div>
@@ -68,7 +68,7 @@ export default function Door({
   )
 
   return (
-    <div className={`door-row ${affordable ? '' : 'poor'}`}>
+    <div className={`door-row ${affordable ? '' : 'poor'}`} data-tour={rowTour}>
       <button
         className="door-mini"
         disabled={disabled || !affordable}
@@ -122,9 +122,6 @@ export default function Door({
         }
       >
         <div className="door-price">
-          <span className="cost">
-            🪙 {formatNum(totalCost)}
-          </span>
           <span className="muted">
             {canAfford >= 1 ? `Tu peux en ouvrir ${formatNum(Math.min(canAfford, 1e15))}` : 'Trop cher pour l’instant'}
           </span>
@@ -138,7 +135,7 @@ export default function Door({
         }
       >
         <button className="btn open-btn" data-tour={tour} disabled={disabled || !affordable} onClick={onOpen}>
-          {count > 1 ? `Ouvrir ×${count}` : 'Ouvrir'}
+          {count > 1 ? `Ouvrir ×${count}` : 'Ouvrir'} <span className="btn-price">🪙 {formatNum(totalCost)}</span>
         </button>
       </Tip>
     </div>

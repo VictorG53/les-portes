@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { GUIDE, HINTS } from './tutorial'
+import { GUIDE, HINTS } from './tutorialData'
 
 const GAP = 14
 const MARGIN = 12

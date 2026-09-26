@@ -81,6 +81,18 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px 20px 8px; display: flex;
 .slot .stars { position: absolute; top: 5px; right: 6px; }
 .ab-dot { position: absolute; top: 5px; left: 6px; font-size: .68rem; }
 
+/* onglet « Portes » : rappel en lecture seule du sac et des talismans équipés */
+.equip-recap { display: flex; gap: 24px; margin-top: 24px; flex-wrap: wrap; }
+.equip-recap-col { flex: 1; min-width: 240px; }
+.equip-recap .section-head { margin-bottom: 10px; }
+.equip-recap .section-head h3 { font-size: 1rem; }
+.mini-slots { display: flex; flex-wrap: wrap; gap: 6px; }
+.mini-slots:empty::before { content: ''; }
+.slot.mini { width: 60px; height: 66px; border-radius: 10px; cursor: default; gap: 2px; }
+.slot.mini:hover { background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
+.slot.mini .emoji { font-size: 1.3rem; }
+.slot.mini small { font-size: .6rem; }
+
 /* ---------- réserve ---------- */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .card { position: relative; background: var(--surface); border: 2px solid var(--c); border-radius: 12px; padding: 14px 10px 10px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; height: 100%; transition: background .12s; }
@@ -107,7 +119,10 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px 20px 8px; display: flex;
 footer { text-align: center; padding: 28px 0 32px; }
 
 /* ---------- révélation ---------- */
-.overlay { position: fixed; inset: 0; background: rgba(12, 10, 8, .84); display: grid; place-items: center; z-index: 10; cursor: pointer; padding: 16px; }
+.overlay {
+  position: fixed; inset: 0; background: rgba(12, 10, 8, .84); display: grid; place-items: center; z-index: 10; cursor: pointer;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
 .reveal { width: min(340px, 92vw); background: var(--surface); border: 2px solid var(--c); border-radius: 18px; padding: 26px 22px 22px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: default; }
 .reveal-badge { width: 120px; height: 120px; border-radius: 50%; background: color-mix(in srgb, var(--c) 16%, var(--surface-2)); display: grid; place-items: center; font-size: 4rem; margin: 6px 0; }
 .reveal-name { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; }
@@ -302,7 +317,7 @@ footer { text-align: center; padding: 28px 0 32px; }
 
 /* ---------- portes : une ligne par porte ---------- */
 .doors { display: flex; flex-direction: column; gap: 8px; overflow: visible; padding: 0; }
-.door-row { display: grid; grid-template-columns: 64px minmax(130px, 190px) minmax(180px, 1fr) minmax(140px, 190px) 128px; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 16px; transition: border-color .12s; }
+.door-row { display: grid; grid-template-columns: 64px minmax(130px, 190px) minmax(180px, 1fr) minmax(140px, 190px) 195px; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 16px; transition: border-color .12s; }
 .door-row:not(.poor):not(.hidden-door):hover { border-color: var(--line-strong); }
 .door-row.poor .door-mini, .door-row.poor .door-name, .door-row.poor .door-odds { opacity: .55; }
 .door-row.hidden-door { opacity: .6; border-style: dashed; }
@@ -319,18 +334,19 @@ footer { text-align: center; padding: 28px 0 32px; }
 .odds-top b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .door-price { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .door-price .muted { font-size: .72rem; }
-.door-row .open-btn { width: 100%; margin: 0; }
+.door-row .open-btn { width: 100%; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.door-row .open-btn .btn-price { font-weight: 600; font-size: .82em; opacity: .85; font-variant-numeric: tabular-nums; }
 .door-row .tip-wrap { width: 100%; }
 .tt-odds { display: flex; align-items: center; gap: 8px; font-size: .78rem; }
 .tt-odds i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .tt-odds b { margin-left: auto; padding-left: 14px; font-variant-numeric: tabular-nums; }
 @media (max-width: 900px) {
-  .door-row { grid-template-columns: 64px 1fr auto; grid-template-areas: 'icon name btn' 'icon odds odds' 'icon price price'; gap: 6px 14px; }
+  .door-row { grid-template-columns: 76px 1fr 155px; grid-template-areas: 'icon name btn' 'icon odds odds' 'icon price price'; gap: 6px 14px; }
   .door-row > .door-mini { grid-area: icon; }
   .door-row > .door-name { grid-area: name; }
-  .door-row > .tip-wrap, .door-row > .open-btn { grid-area: btn; width: 120px; }
-  .door-row > :nth-child(3) { grid-area: odds; }
-  .door-row > :nth-child(4) { grid-area: price; }
+  .door-row > .tip-wrap, .door-row > .open-btn { grid-area: btn; width: 100%; }
+  .door-row > .door-odds { grid-area: odds; }
+  .door-row > .door-price { grid-area: price; }
 }
 
 /* ================= Coque de l'application : en-tête, onglets, mise en page ================= */
@@ -350,18 +366,22 @@ main { max-width: 1320px; padding: 24px 24px 48px; gap: 32px; }
 .stat { min-width: 0; padding: 5px 12px; }
 .stat.gold { min-width: 116px; }
 
-/* onglet « Portes » : les portes à gauche, les sacs à droite (visibles en même temps) */
-.play { display: grid; grid-template-columns: minmax(0, 1fr) 388px; gap: 28px; align-items: start; }
-.play-main, .play-side { min-width: 0; }
-.play-side { display: flex; flex-direction: column; gap: 28px; position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; padding-right: 2px; }
-.play-side .section-head { margin-bottom: 10px; }
-.play-side .section-head h2 { font-size: 1.05rem; }
-.play-side .row { gap: 6px; }
+/* mise en page à deux colonnes réutilisable (onglet « Collection » : la réserve à gauche, les sacs à droite) */
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); gap: 28px; align-items: start; }
+.cols-main, .cols-side { min-width: 0; }
+.cols-main { grid-column: 1; grid-row: 1; }
+.cols-side { grid-column: 2; grid-row: 1; }
+.cols-side { display: flex; flex-direction: column; gap: 28px; position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; padding-right: 2px; }
+.cols-side .section-head { margin-bottom: 10px; }
+.cols-side .section-head h2 { font-size: 1.05rem; }
+.cols-side .row { gap: 6px; }
 
-/* portes : colonnes ajustées à la colonne principale */
-.door-row { grid-template-columns: 56px minmax(110px, 150px) minmax(150px, 1fr) minmax(104px, 136px) 108px; gap: 14px; padding: 10px 14px; }
-.door-mini { width: 56px; height: 72px; }
-.door-row .open-btn { padding: 10px 8px; }
+/* portes : colonnes ajustées à la colonne principale (téléphone étroit) */
+@media (max-width: 760px) {
+  .door-row { grid-template-columns: 56px 1fr 135px; gap: 6px 14px; padding: 10px 14px; }
+  .door-mini { width: 56px; height: 72px; }
+  .door-row .open-btn { padding: 10px 8px; }
+}
 
 /* cartes de la réserve : plus compactes */
 .grid { grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 8px; }
@@ -383,14 +403,18 @@ main { max-width: 1320px; padding: 24px 24px 48px; gap: 32px; }
   .stat.secondary { display: none; }
 }
 @media (max-width: 1100px) {
-  .play { grid-template-columns: minmax(0, 1fr); }
-  .play-side { position: static; max-height: none; overflow: visible; }
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .cols-main, .cols-side { grid-column: 1; grid-row: auto; }
+  .cols-side { position: static; max-height: none; overflow: visible; }
 }
 /* téléphone : barre de navigation en bas, en-tête réduit */
 @media (max-width: 760px) {
   .topbar-inner { padding: 8px 14px; gap: 10px; }
   .brand-name { display: none; }
   .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; border-radius: 0; border: 0; border-top: 1px solid var(--line); background: var(--surface); padding: 6px calc(8px + env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left)); justify-content: space-around; gap: 2px; }
+  .qty-row { flex: 1 0 100%; }
+  .seg { width: 100%; justify-content: space-between; }
+  .seg button { padding: 6px 10px; font-size: .78rem; }
   .tab { flex: 1; flex-direction: column; gap: 2px; font-size: .68rem; padding: 6px 4px; }
   .tab-icon { font-size: 1.25rem; }
   .tab-badge { position: absolute; top: 2px; left: 50%; margin-left: 8px; }
@@ -417,7 +441,7 @@ main { max-width: 1320px; padding: 24px 24px 48px; gap: 32px; }
 .ach-summary { display: flex; align-items: center; gap: 14px; margin: -4px 0 18px; }
 .ach-summary .progress { flex: 1; max-width: 420px; }
 @keyframes tab-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-main > .play, main > section { animation: tab-in .2s ease-out; }
+main > .cols, main > section { animation: tab-in .2s ease-out; }
 @media (max-width: 760px) {
   .toasts .toast:nth-child(n + 2) { display: none; }
   .toast-more { display: none; }
@@ -444,17 +468,15 @@ main > .play, main > section { animation: tab-in .2s ease-out; }
 .brand-thin { font-weight: 400; color: var(--muted); }
 
 /* ---------- dessin des portes ---------- */
-.door-row { grid-template-columns: 76px minmax(110px, 150px) minmax(150px, 1fr) minmax(104px, 136px) 108px; }
-.door-mini { width: 76px; height: 100px; border-radius: 12px; perspective: 500px; background: var(--surface-2); }
+@media (min-width: 901px) {
+  .door-row { grid-template-columns: 76px minmax(110px, 150px) minmax(150px, 1fr) minmax(104px, 136px) 170px; }
+  .door-mini { width: 76px; height: 100px; }
+}
+.door-mini { border-radius: 12px; perspective: 500px; background: var(--surface-2); }
 .door-art { position: relative; width: 64px; height: 88px; transition: transform .15s, filter .15s; }
 .door-base, .door-leaf { position: absolute; inset: 0; display: block; }
 .door-leaf { backface-visibility: hidden; }
 .door-mini:not(:disabled):hover .door-art { transform: translateY(-2px); filter: brightness(1.12); }
-
-/* téléphone : la ligne de porte passe sur plusieurs niveaux (après la règle générale ci-dessus, qui sinon l'emporte) */
-@media (max-width: 900px) {
-  .door-row { grid-template-columns: 76px 1fr auto; grid-template-areas: 'icon name btn' 'icon odds odds' 'icon price price'; gap: 6px 14px; }
-}
 
 /* ---------- page de statistiques ---------- */
 .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-bottom: 18px; }
@@ -499,7 +521,7 @@ main > .play, main > section { animation: tab-in .2s ease-out; }
 :root[data-motion='reduce'] *, :root[data-motion='reduce'] *::before, :root[data-motion='reduce'] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 
 /* ---------- fenêtre des réglages ---------- */
-.reveal.settings { width: min(520px, 94vw); align-items: stretch; text-align: left; max-height: 92vh; overflow-y: auto; }
+.reveal.settings { width: min(520px, 94vw); align-items: stretch; text-align: left; max-height: min(92vh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)); overflow-y: auto; }
 .settings .reveal-title { text-align: center; }
 .settings-group { display: flex; flex-direction: column; gap: 4px; }
 .settings-title { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 8px 0 2px; }

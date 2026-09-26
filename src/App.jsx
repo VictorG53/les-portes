@@ -186,6 +186,27 @@ export default function App() {
     )
   }
 
+  // rappel en lecture seule (onglet Portes) : ce qui est équipé, sans pouvoir agir dessus
+  const renderMiniSlot = (entry, i, charm) => {
+    const { item, tier, key, shiny, level } = entry
+    const r = RARITIES[item.rarity]
+    return (
+      <Tip key={key + i} content={<ItemTip item={item} tier={tier} shiny={shiny} level={level} />}>
+        <div className={`slot mini ${shiny ? 'shiny' : ''}`} style={{ '--c': r.color }}>
+          {tier > 1 && <span className="stars">{starsText(tier)}</span>}
+          {shiny && <span className="shiny-dot">✨</span>}
+          {level > 0 && <span className="lvl-dot">+{level}</span>}
+          <span className="emoji">{item.emoji}</span>
+          {charm ? (
+            <small className="slot-effect">{abilityShort(item, tier, shiny, level)}</small>
+          ) : (
+            <small>+{formatNum(itemIncome(item, tier, shiny, level))}/s</small>
+          )}
+        </div>
+      </Tip>
+    )
+  }
+
   const shownCards = applyView(cards, state, view, fc)
 
   // notifications masquées dans les réglages : on les vide pour qu'elles ne s'accumulent pas
@@ -204,15 +225,9 @@ export default function App() {
     prestige: gain >= 1 ? `+${gain}` : null,
   }
 
-  // porte lointaine : au-delà de la porte suivante la plus chère déjà ouverte, et hors de portée
+  // porte lointaine : jamais encore ouverte, et hors de portée pour l'instant
   const isHidden = (door, i) =>
-    i > (state.stats.maxDoor ?? 0) + 1 && state.gold < doorPrice(door, bonus.discount, bonus.permanent)
-  // la porte la plus chère qu'on peut payer avec le lot choisi
-  const bestDoor = [...DOORS].reverse().find((door) => {
-    const price = doorPrice(door, bonus.discount, bonus.permanent)
-    return state.gold >= price * qty
-  })
-
+    i > (state.stats.maxDoor ?? 0) && state.gold < doorPrice(door, bonus.discount, bonus.permanent)
   const onOpen = (door) => {
     if (opening || reveal) return
     const results = openDoor(door.id, qty)
@@ -311,26 +326,12 @@ export default function App() {
 
       <main>
         {tab === 'play' && (
-          <div className="play">
-            <div className="play-main">
+        <div className="cols">
+          <div className="cols-main">
         <section>
           <div className="section-head">
             <h2>Portes</h2>
-            <div className="row">
-            <Tip
-              wrap
-              content={
-                <Text title="Meilleure porte">
-                  {bestDoor
-                    ? `Ouvre ${qty > 1 ? `${qty} fois ` : ''}${bestDoor.name}, la porte la plus chère que tu peux payer.`
-                    : 'Aucune porte n’est abordable pour le moment.'}
-                </Text>
-              }
-            >
-              <button className="btn small" disabled={!bestDoor || !!opening || !!reveal} onClick={() => bestDoor && onOpen(bestDoor)}>
-                ⚡ Ouvrir la meilleure porte{qty > 1 ? ` ×${qty}` : ''}
-              </button>
-            </Tip>
+            <div className="row qty-row">
             <Tip content={<Text title="Quantité">Nombre de portes ouvertes d'un coup. Le prix est multiplié d'autant.</Text>}>
             <div className="seg">
               {QUANTITIES.map((q) =>
@@ -372,6 +373,7 @@ export default function App() {
                 door={door}
                 hidden={isHidden(door, i)}
                 tour={i === 0 ? 'first-open' : undefined}
+                rowTour={i === 1 ? 'second-door' : undefined}
                 gold={state.gold}
                 count={qty}
                 price={doorPrice(door, bonus.discount, bonus.permanent)}
@@ -386,8 +388,43 @@ export default function App() {
             ))}
           </div>
         </section>
+          </div>
+          <aside className="cols-side">
+            <div className="equip-recap-col">
+              <div className="section-head">
+                <h3>
+                  Sac équipé · {used}/{state.slots}
+                </h3>
+                <button className="link" onClick={() => setTab('collection')}>
+                  Gérer dans Collection
+                </button>
+              </div>
+              <div className="mini-slots">
+                {equippedList.length === 0 && <span className="muted">Aucun objet équipé</span>}
+                {equippedList.map((entry, i) => renderMiniSlot(entry, i, false))}
+              </div>
             </div>
-            <aside className="play-side">
+            <div className="equip-recap-col">
+              <div className="section-head">
+                <h3>
+                  Talismans · {charmsUsed}/{state.charmSlots}
+                </h3>
+                <button className="link" onClick={() => setTab('collection')}>
+                  Gérer dans Collection
+                </button>
+              </div>
+              <div className="mini-slots">
+                {charmsList.length === 0 && <span className="muted">Aucun talisman équipé</span>}
+                {charmsList.map((entry, i) => renderMiniSlot(entry, i, true))}
+              </div>
+            </div>
+          </aside>
+        </div>
+        )}
+
+        {tab === 'collection' && (
+        <div className="cols">
+          <aside className="cols-side">
         <section className="bag" data-tour="bag">
           <div className="section-head">
             <h2>
@@ -528,11 +565,8 @@ export default function App() {
             {Array.from({ length: state.charmSlots }, (_, i) => renderSlot(charmsList[i], i, true))}
           </div>
         </section>
-            </aside>
-          </div>
-        )}
-
-        {tab === 'collection' && (
+          </aside>
+          <div className="cols-main">
         <section className="inventory">
           <div className="section-head">
             <h2>
@@ -699,6 +733,8 @@ export default function App() {
             Valeur de la collection : {formatNum(collectionValue(state.inventory))} or
           </p>
         </section>
+          </div>
+        </div>
         )}
 
         {tab === 'achievements' && (

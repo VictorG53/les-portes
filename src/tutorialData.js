@@ -25,7 +25,7 @@ export const GUIDE = [
   },
   {
     id: 'bag',
-    tab: 'play',
+    tab: 'collection',
     target: '[data-tour="bag"]',
     title: 'Ton sac équipé',
     text: "Ton objet est équipé automatiquement ici. Seuls les objets de ce sac te rapportent de l'or, chaque seconde.",
@@ -49,9 +49,9 @@ export const GUIDE = [
   {
     id: 'doors',
     tab: 'play',
-    target: '[data-tour="doors"]',
+    target: '[data-tour="second-door"]',
     title: 'Monte en gamme',
-    text: 'Chaque ligne indique les chances de chaque rareté. Ouvre la porte la plus chère que tu peux payer pour progresser plus vite. Bonne chance !',
+    text: 'Chaque porte indique les chances de chaque rareté. Ouvre la porte la plus chère que tu peux payer pour progresser plus vite. Bonne chance !',
     button: 'Terminer',
   },
 ]
@@ -61,7 +61,7 @@ export const GUIDE = [
 export const HINTS = [
   {
     id: 'talisman',
-    tab: 'play',
+    tab: 'collection',
     target: '[data-tour="charms"]',
     title: 'Ton premier talisman !',
     text: "Les objets à capacité (⚡) vont dans les talismans. Ils ne rapportent pas d'or, mais leur effet s'applique tant qu'ils sont équipés.",
@@ -69,7 +69,7 @@ export const HINTS = [
   },
   {
     id: 'slots',
-    tab: 'play',
+    tab: 'collection',
     target: '[data-tour="bag"]',
     title: 'Ton sac est plein',
     text: "Tu as plus d'objets que d'emplacements. Achète un emplacement avec de l'or, ou remplace un objet par un meilleur (« Équiper les meilleurs »).",
