@@ -7,6 +7,7 @@ import { play } from './sound'
 const MOTION = [['auto', 'Auto'], ['reduce', 'Réduites'], ['full', 'Complètes']]
 const FORMATS = [['short', 'Abrégé'], ['scientific', 'Scientifique']]
 const EXAMPLE = 1234567
+const hasVibration = typeof navigator !== 'undefined' && !!navigator.vibrate
 
 function Segmented({ value, options, onChange, label }) {
   return (
@@ -83,6 +84,11 @@ export default function Settings({ settings, onChange, onClose, onResetGame, onR
           <Row title="Couper le son">
             <Toggle checked={settings.muted} onChange={(muted) => onChange({ muted })} label="Couper le son" />
           </Row>
+          {hasVibration && (
+            <Row title="Vibrations" hint="Retour haptique lors des actions (ouverture, succès...).">
+              <Toggle checked={settings.haptics} onChange={(haptics) => onChange({ haptics })} label="Vibrations" />
+            </Row>
+          )}
         </div>
 
         <div className="settings-group">

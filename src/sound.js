@@ -1,6 +1,7 @@
 // Sons synthétisés avec la Web Audio API : aucun fichier audio à charger.
 import { RARITY_ORDER } from './data'
 import { groupResults, revealStep } from './revealUtils'
+import { haptic } from './haptics'
 const SCALE = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98, 1760]
 
 const MASTER_GAIN = 0.35 // gain de base ; le réglage de volume s'y applique
@@ -160,6 +161,7 @@ function chime(rarityIdx, isNew, delay = 0, shiny = false) {
 }
 
 export function play(name, ...args) {
+  haptic(name, ...args)
   if (muted) return
   try {
     sounds[name]?.(...args)
@@ -169,6 +171,13 @@ export function play(name, ...args) {
 }
 
 export function playReveal(results) {
+  try {
+    const idx = (r) => RARITY_ORDER.indexOf(r.item.rarity)
+    const bestIdx = Math.max(...results.map(idx))
+    haptic('reveal', bestIdx, results.some((r) => r.shiny))
+  } catch {
+    /* ignore */
+  }
   if (muted) return
   try {
     const idx = (r) => RARITY_ORDER.indexOf(r.item.rarity)
