@@ -188,7 +188,7 @@ export const DOORS = [
     id: 'rainbow',
     name: 'Porte Rainbow',
     cost: 250000000,
-    weights: [0, 0, 0, 0, 45, 32, 16, 6.6, 0.4, 0],
+    weights: [0, 0, 0, 0, 30, 40, 20, 8, 2, 0],
   },
   {
     id: 'eternelle',
@@ -201,7 +201,7 @@ export const DOORS = [
 // Les portes chères s'adaptent à ta puissance permanente (Fortune, clés, succès) : leur prix est multiplié par
 // puissance ^ exposant. Les premières portes n'en dépendent pas (le début va de plus en plus vite avec les prestiges),
 // la dernière suit ta puissance de près, si bien qu'elle reste longue à atteindre.
-export const DOOR_PRICE_EXP = { bois: 0, fer: 0, or: 0, runes: 0.45, cristal: 0.9, neant: 1.3, rainbow: 1.7, eternelle: 2.2 }
+export const DOOR_PRICE_EXP = { bois: 0, fer: 0, or: 0, runes: 0.3, cristal: 0.5, neant: 0.65, rainbow: 0.8, eternelle: 0.95 }
 
 // classe CSS à ajouter au texte d'une rareté (dégradé arc-en-ciel animé pour Rainbow)
 export const rarityClass = (rarity) => (RARITIES[rarity]?.rainbow ? 'rainbow-text' : RARITIES[rarity]?.mono ? 'mono-text' : '')
