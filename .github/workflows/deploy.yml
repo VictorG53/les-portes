@@ -1,43 +1,151 @@
-# Publie automatiquement le jeu sur GitHub Pages à chaque envoi sur la branche principale.
-# À activer une fois dans le dépôt : Settings > Pages > Source : « GitHub Actions ».
-name: Déploiement
+# Construit et déploie le frontend et l'API du classement sur le même VPS, à chaque envoi sur la branche
+# principale : build de 2 images Docker, poussées sur GitHub Container Registry, puis connexion SSH au VPS
+# qui récupère les images et (re)lance les 3 conteneurs (frontend, api, base de données). Rien d'autre n'est
+# nécessaire côté VPS que Docker et un Nginx (hors Docker) qui route les 2 domaines vers les ports 8005/3001
+# (voir server/README.md pour cette unique étape manuelle, faite une fois).
+#
+# Secrets requis (Settings > Secrets and variables > Actions) :
+#   SSH_HOST, SSH_USER, SSH_PRIVATE_KEY — accès SSH au VPS (l'utilisateur doit pouvoir lancer `docker`)
+#   POSTGRES_PASSWORD, JWT_SECRET       — valeurs aléatoires (ex. `openssl rand -hex 32`)
+#   CORS_ORIGIN                         — https://les-portes.fwszs.dev
+name: Build and Deploy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+env:
+  REGISTRY: ghcr.io
+  API_URL: https://api.les-portes.fwszs.dev
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      frontend_image: ${{ steps.names.outputs.frontend_image }}
+      api_image: ${{ steps.names.outputs.api_image }}
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Compute image names
+        id: names
+        run: |
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          echo "frontend_image=ghcr.io/${REPO_OWNER}/${REPO_NAME}:latest" >> $GITHUB_OUTPUT
+          echo "api_image=ghcr.io/${REPO_OWNER}/${REPO_NAME}-api:latest" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
         with:
-          path: dist
+          context: .
+          file: ./Dockerfile
+          push: true
+          build-args: |
+            VITE_API_URL=${{ env.API_URL }}
+          tags: |
+            ${{ steps.names.outputs.frontend_image }}
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./server/api
+          file: ./server/api/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.names.outputs.api_image }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
 
   deploy:
-    needs: build
+    needs: build-and-push
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    environment: prod
     steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy over SSH
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          FRONTEND_IMAGE: ${{ needs.build-and-push.outputs.frontend_image }}
+          API_IMAGE: ${{ needs.build-and-push.outputs.api_image }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$SSH_USER@$SSH_HOST" << EOF
+          set -e
+
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+          docker network create lesportes-net 2>/dev/null || true
+
+          # --- base de données : volume nommé persistant, le conteneur peut être recréé sans perte de données ---
+          docker pull postgres:16-alpine
+          docker stop lesportes-db || true
+          docker rm lesportes-db || true
+          docker run -d \
+            --name lesportes-db \
+            --restart unless-stopped \
+            --network lesportes-net \
+            -e POSTGRES_DB=lesportes \
+            -e POSTGRES_USER=lesportes \
+            -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
+            -v lesportes_db_data:/var/lib/postgresql/data \
+            postgres:16-alpine
+
+          # --- API ---
+          docker pull $API_IMAGE
+          docker stop lesportes-api || true
+          docker rm lesportes-api || true
+          docker run -d \
+            --name lesportes-api \
+            --restart unless-stopped \
+            --network lesportes-net \
+            -e DATABASE_URL=postgres://lesportes:$POSTGRES_PASSWORD@lesportes-db:5432/lesportes \
+            -e JWT_SECRET=$JWT_SECRET \
+            -e CORS_ORIGIN=$CORS_ORIGIN \
+            -e PORT=3001 \
+            -p 127.0.0.1:3001:3001 \
+            $API_IMAGE
+
+          # --- frontend ---
+          docker pull $FRONTEND_IMAGE
+          docker stop lesportes || true
+          docker rm lesportes || true
+          docker run -d \
+            --name lesportes \
+            --restart unless-stopped \
+            -p 8005:80 \
+            $FRONTEND_IMAGE
+
+          docker logout ghcr.io
+          echo "Déploiement terminé !"
+          EOF

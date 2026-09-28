@@ -623,3 +623,21 @@ html, body, * { scrollbar-width: none !important; -ms-overflow-style: none; }
 .tip-wrap > button:disabled { pointer-events: none; }
 /* pas de menu contextuel ni de sélection lors d'un appui long sur un élément tactile */
 .tip-wrap, .stat, .slot, .card, .tab { -webkit-touch-callout: none; }
+
+/* ---------- compte (connexion / inscription) ---------- */
+.reveal.auth { width: min(380px, 92vw); align-items: stretch; text-align: left; max-height: min(92vh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)); overflow-y: auto; }
+.auth .reveal-title { text-align: center; }
+.auth > .muted { text-align: center; font-size: .82rem; }
+.auth-form { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+.auth-form label { display: flex; flex-direction: column; gap: 4px; font-size: .82rem; color: var(--muted); }
+.auth-input { flex: none; max-width: none; width: 100%; height: auto; }
+.auth-error { color: var(--danger); font-size: .82rem; background: color-mix(in srgb, var(--danger) 12%, transparent); border-radius: 8px; padding: 8px 12px; }
+.auth-switch { align-self: center; margin-top: 10px; }
+
+/* ---------- classement ---------- */
+.board { display: flex; flex-direction: column; }
+.board-row { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 12px; padding: 9px 6px; border-bottom: 1px solid var(--line); font-size: .88rem; font-variant-numeric: tabular-nums; }
+.board-row:last-child { border-bottom: 0; }
+.board-head { font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.board-row.me { background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 8px; font-weight: 700; }
+.board-mine { margin: -6px 0 14px; }

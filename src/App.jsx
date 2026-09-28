@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, MotionConfig } from 'framer-motion'
 import {
   DOORS,
@@ -64,6 +64,12 @@ import { play } from './sound'
 import Settings from './Settings'
 import { applySettings, loadSettings, saveSettings } from './settingsStore'
 import { clearGame, loadGame, saveGame } from './save'
+import Auth from './Auth'
+import Leaderboard from './Leaderboard'
+import { loadAuth, saveAuth } from './authStore'
+import { api } from './api'
+
+const SCORE_SYNC_MS = 120000 // fréquence de la soumission automatique au classement
 
 
 export default function App() {
@@ -97,7 +103,34 @@ export default function App() {
   }, [settings])
   const [opening, setOpening] = useState(null) // id de la porte en cours d'ouverture
 
+  // compte joueur (classement) : { token, pseudo } | null, indépendant de la sauvegarde de partie
+  const [auth, setAuth] = useState(loadAuth)
+  const [showAuth, setShowAuth] = useState(false)
+  useEffect(() => saveAuth(auth), [auth])
+
   const { income, bonus } = computeStats(state)
+
+  // soumission au classement : périodique (voir SCORE_SYNC_MS) + juste après chaque prestige. state/income
+  // changent à chaque tick, donc on les lit via une ref (jamais périmée) plutôt que dans les dépendances de l'effet.
+  const latest = useRef({ state, income })
+  useEffect(() => {
+    latest.current = { state, income }
+  })
+  const submitScore = useCallback(() => {
+    if (!auth) return
+    const { state: s, income: inc } = latest.current
+    const totalGoldEarned = Math.round(s.stats.earnedBefore + s.runEarned + s.stats.offlineGold)
+    api
+      .submitScore(auth.token, { totalGoldEarned: String(totalGoldEarned), totalKeys: s.totalKeys, prestiges: s.prestiges, income: inc })
+      .catch(() => {}) // le classement ne doit jamais gêner le jeu
+  }, [auth])
+  useEffect(() => {
+    if (!auth) return
+    submitScore()
+    const id = setInterval(submitScore, SCORE_SYNC_MS)
+    return () => clearInterval(id)
+  }, [auth, submitScore])
+
   const used = equippedCount(state.equipped)
   const charmsUsed = equippedCount(state.charms)
   const nextCharmCost = charmSlotCost(state.charmSlots)
@@ -871,6 +904,10 @@ export default function App() {
           </div>
         </section>
         )}
+
+        {tab === 'leaderboard' && (
+          <Leaderboard auth={auth} onLogin={() => setShowAuth(true)} onLogout={() => setAuth(null)} />
+        )}
       </main>
 
       <Tutorial
@@ -908,6 +945,21 @@ export default function App() {
               setShowSettings(false)
               setTab('play')
               setTutorial({ step: 0, done: false, seen: {} })
+            }}
+            auth={auth}
+            onLogin={() => {
+              setShowSettings(false)
+              setShowAuth(true)
+            }}
+            onLogout={() => setAuth(null)}
+          />
+        )}
+        {showAuth && (
+          <Auth
+            onClose={() => setShowAuth(false)}
+            onAuth={(a) => {
+              setAuth(a)
+              setShowAuth(false)
             }}
           />
         )}

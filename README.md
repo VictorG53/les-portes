@@ -90,14 +90,22 @@ Il est conseillé de le relancer après chaque changement de contenu ou de valeu
 
 ## Mise en ligne
 
-Le jeu est un site **entièrement statique** : `npm run build` produit le dossier `dist/`, à publier tel quel sur n'importe quel hébergeur.
-Les chemins sont relatifs (`base: './'`), donc il fonctionne à la racine d'un domaine comme dans un sous-dossier. Aucune requête externe : la police est
-embarquée, il n'y a ni statistiques ni suivi.
+Le jeu (frontend) est un site **entièrement statique** : `npm run build` produit le dossier `dist/`. Les chemins sont
+relatifs (`base: './'`), donc il fonctionne à la racine d'un domaine comme dans un sous-dossier. Aucune requête
+externe hors l'API du classement (facultative, voir `server/`) : la police est embarquée, il n'y a ni statistiques
+ni suivi.
+
+**Déploiement automatisé (VPS + Docker)** — `.github/workflows/deploy.yml` construit l'image du frontend (`Dockerfile`
+à la racine, Nginx statique) et celle de l'API (`server/api/`), les pousse sur GitHub Container Registry, puis les
+déploie sur un même VPS par SSH à chaque envoi sur `main`. Voir `server/README.md` pour la préparation initiale du
+VPS (Nginx, Certbot, secrets GitHub).
+
+Sans serveur (le classement ne sera pas disponible), le dossier `dist/` reste publiable tel quel sur n'importe quel
+hébergeur statique :
 
 | Hébergeur | Comment |
 |---|---|
 | **Netlify** (le plus simple) | Glisser-déposer le dossier `dist/` sur app.netlify.com/drop |
-| **GitHub Pages** | Pousser le dépôt sur GitHub, puis Settings > Pages > Source : « GitHub Actions » (le workflow `.github/workflows/deploy.yml` fait le reste) |
 | **Cloudflare Pages / Vercel** | Importer le dépôt ; commande de build : `npm run build` ; dossier de sortie : `dist` |
 
 Pour tester le résultat en local : `npm run build && npm run preview`.

@@ -7,6 +7,7 @@ export const TABS = [
   { id: 'achievements', icon: '🏆', label: 'Succès' },
   { id: 'stats', icon: '📊', label: 'Stats' },
   { id: 'prestige', icon: '🗝️', label: 'Prestige' },
+  { id: 'leaderboard', icon: '🥇', label: 'Classement' },
 ]
 
 export function loadTab() {
