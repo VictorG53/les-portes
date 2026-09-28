@@ -334,7 +334,7 @@ export const UPGRADE_STEP = { income: 0.25, luck: 0.05, discount: 0.03, shiny: 0
 export const UPGRADES = [
   {
     id: 'income', icon: '💰', name: 'Fortune', max: 40,
-    cost: (l) => Math.round(1.5 ** l),
+    cost: (l) => 2 + 5 * l,
     effect: (l) => `+${Math.round(l * UPGRADE_STEP.income * 100)}% de revenu`,
   },
   {
