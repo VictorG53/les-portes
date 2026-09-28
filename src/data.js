@@ -215,8 +215,8 @@ export const FUSE_COUNT = 5
 export const MAX_TIER = 8
 // niveau maximal pris en compte pour la puissance des capacités (au-delà, la fusion ne fait que gagner de la place)
 const ABILITY_TIER_CAP = 4
-// affichage compact du niveau : ★★★ jusqu'à 5, puis ★6, ★7...
-export const starsText = (tier) => (tier <= 5 ? '★'.repeat(tier) : `★${tier}`)
+// affichage compact du niveau : ★★ jusqu'à 2, puis ★3, ★4...
+export const starsText = (tier) => (tier <= 2 ? '★'.repeat(tier) : `★${tier}`)
 // revenu d'un objet fusionné : ×TIER_MULT par niveau. Volontairement inférieur à FUSE_COUNT :
 // la fusion libère déjà FUSE_COUNT - 1 emplacements dans le sac, c'est son principal avantage.
 export const TIER_MULT = 3
