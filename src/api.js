@@ -53,4 +53,12 @@ export const api = {
   },
   putSave: (token, payload) => request('/save', { method: 'PUT', token, body: JSON.stringify({ payload }) }),
   deleteSave: (token) => request('/save', { method: 'DELETE', token }),
+  // fermeture d'onglet : `sendBeacon` part même si la page se ferme dans la foulée (contrairement à un
+  // fetch normal, souvent annulé), mais ne peut pas poser d'en-tête -> le jeton voyage dans le corps
+  // (voir POST /save/beacon côté serveur). Best-effort : pas de retour possible depuis `pagehide`.
+  beaconSave: (token, payload) => {
+    if (!BASE || !navigator.sendBeacon) return false
+    const blob = new Blob([JSON.stringify({ token, payload })], { type: 'application/json' })
+    return navigator.sendBeacon(BASE + '/save/beacon', blob)
+  },
 }

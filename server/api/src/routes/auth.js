@@ -23,12 +23,12 @@ authRouter.post('/register', async (req, res) => {
   const passwordHash = await hashPassword(password)
   try {
     const { rows } = await pool.query(
-      `insert into users (email, password_hash, pseudo) values (lower($1), $2, $3) returning id`,
+      `insert into users (email, password_hash, pseudo) values (lower($1), $2, $3) returning id, session_id`,
       [email, passwordHash, pseudo],
     )
     const userId = rows[0].id
     await pool.query('insert into leaderboard_entries (user_id) values ($1)', [userId])
-    res.json({ token: signToken(userId), pseudo })
+    res.json({ token: signToken(userId, rows[0].session_id), pseudo })
   } catch (err) {
     if (err.code === '23505') {
       // contrainte unique violée : email ou pseudo déjà pris
@@ -50,7 +50,12 @@ authRouter.post('/login', async (req, res) => {
   const user = rows[0]
   const ok = user && (await verifyPassword(password, user.password_hash))
   if (!ok) return res.status(401).json({ error: 'Email ou mot de passe incorrect' })
-  res.json({ token: signToken(user.id), pseudo: user.pseudo })
+  // régénère la session : invalide tout jeton émis pour une connexion précédente (un seul appareil à la fois)
+  const { rows: updated } = await pool.query(
+    'update users set session_id = gen_random_uuid() where id = $1 returning session_id',
+    [user.id],
+  )
+  res.json({ token: signToken(user.id, updated[0].session_id), pseudo: user.pseudo })
 })
 
 authRouter.get('/me', requireAuth, async (req, res) => {

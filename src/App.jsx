@@ -134,14 +134,20 @@ export default function App() {
   useEffect(() => {
     latest.current = { state, income }
   })
+  // une connexion depuis un autre appareil invalide ce jeton côté serveur (une seule session à la fois,
+  // voir server/api/src/middleware/requireAuth.js) : le prochain appel renvoie 401/SESSION_REVOKED, on
+  // déconnecte alors localement pour remontrer l'écran de connexion plutôt que d'insister dans le vide.
+  const onSyncError = (err) => {
+    if (err?.status === 401) setAuth(null)
+  }
   const syncToServer = useCallback(() => {
     if (!auth) return
     const { state: s, income: inc } = latest.current
     const sum = summarize(s)
     api
       .submitScore(auth.token, { totalGoldEarned: String(sum.gold), totalKeys: sum.keys, prestiges: sum.prestiges, income: inc })
-      .catch(() => {}) // le classement ne doit jamais gêner le jeu
-    api.putSave(auth.token, { version: SAVE_VERSION, savedAt: Date.now(), state: s }).catch(() => {})
+      .catch(onSyncError)
+    api.putSave(auth.token, { version: SAVE_VERSION, savedAt: Date.now(), state: s }).catch(onSyncError)
   }, [auth])
   useEffect(() => {
     if (!auth) return
@@ -149,6 +155,29 @@ export default function App() {
     const id = setInterval(syncToServer, SCORE_SYNC_MS)
     return () => clearInterval(id)
   }, [auth, syncToServer])
+
+  // fermeture/masquage d'onglet : tente une dernière sauvegarde fiable via sendBeacon (part même si la
+  // page se ferme tout de suite après, contrairement à un fetch classique). auth/state changent souvent :
+  // on les lit via les refs déjà tenues à jour (latest, plus authRef ci-dessous) pour ne pas réabonner
+  // l'effet à chaque tick.
+  const authRef = useRef(auth)
+  useEffect(() => {
+    authRef.current = auth
+  }, [auth])
+  useEffect(() => {
+    const beacon = () => {
+      const a = authRef.current
+      if (!a) return
+      api.beaconSave(a.token, { version: SAVE_VERSION, savedAt: Date.now(), state: latest.current.state })
+    }
+    const onHide = () => document.visibilityState === 'hidden' && beacon()
+    document.addEventListener('visibilitychange', onHide)
+    window.addEventListener('pagehide', beacon)
+    return () => {
+      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('pagehide', beacon)
+    }
+  }, [])
 
   const finishAuth = (a) => {
     setAuth(a)

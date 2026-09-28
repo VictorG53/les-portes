@@ -10,12 +10,15 @@ const TOKEN_TTL = '365d' // pas de rafraîchissement de token pour l'instant : l
 export const hashPassword = (password) => bcrypt.hash(password, BCRYPT_COST)
 export const verifyPassword = (password, hash) => bcrypt.compare(password, hash)
 
-export const signToken = (userId) => jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: TOKEN_TTL })
+// `sid` identifie la session (voir users.session_id) : un seul appareil connecté à la fois, une nouvelle
+// connexion régénère cet id côté base et invalide donc tous les jetons signés avec l'ancien.
+export const signToken = (userId, sessionId) => jwt.sign({ sub: userId, sid: sessionId }, JWT_SECRET, { expiresIn: TOKEN_TTL })
 
-// renvoie l'id utilisateur si le token est valide, sinon null (ne lève jamais)
+// renvoie { userId, sessionId } si le token est valide (structurellement), sinon null (ne lève jamais)
 export function verifyToken(token) {
   try {
-    return jwt.verify(token, JWT_SECRET).sub
+    const { sub, sid } = jwt.verify(token, JWT_SECRET)
+    return sub && sid ? { userId: sub, sessionId: sid } : null
   } catch {
     return null
   }

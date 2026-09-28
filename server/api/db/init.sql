@@ -11,6 +11,11 @@ create table if not exists users (
   created_at timestamptz not null default now()
 );
 
+-- un seul appareil connecté à la fois : chaque connexion régénère cet id et invalide les jetons
+-- signés avec l'ancien (voir src/auth.js et src/middleware/requireAuth.js). Colonne ajoutée après coup :
+-- `add column if not exists` pour rester idempotent sur une base déjà en place.
+alter table users add column if not exists session_id uuid not null default gen_random_uuid();
+
 create table if not exists leaderboard_entries (
   user_id uuid primary key references users(id) on delete cascade,
   total_gold_earned numeric not null default 0,
