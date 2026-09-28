@@ -721,9 +721,20 @@ export function useGame({ load, save, clear }) {
 
   // remplace toute la partie par un état déjà prêt (ex. sauvegarde récupérée d'un autre appareil, voir
   // App.jsx). Persiste immédiatement : ne dépend pas de la sauvegarde périodique (toutes les 2 s).
+  // Calcule aussi l'absence par rapport à `lastSeen` de cet état (l'horloge d'absence de l'ancienne
+  // partie ne dit rien sur celle qu'on vient d'adopter) : sans ça, le retour d'un autre appareil ne
+  // montre jamais l'écran « Bon retour ».
   const loadState = useCallback((next) => {
-    io.current.save(next)
-    setState(next)
+    const now = Date.now()
+    const gap = (now - (next.lastSeen ?? now)) / 1000
+    lastTick.current = now
+    const gain = gap > AWAY_SECONDS ? offlineGain(next, gap) : 0
+    const applied = gain > 0 ? applyOffline(next, gap) : next
+    io.current.save(applied)
+    setState(applied)
+    if (gain > 0 && gap >= MIN_REPORT_SECONDS) {
+      setWelcome({ seconds: gap, gain, rate: offlineRate(applied), capHours: offlineCapHours(applied) })
+    }
   }, [])
 
   return {
