@@ -73,7 +73,7 @@ leaderboardRouter.get('/', async (req, res) => {
     `select u.pseudo, l.total_gold_earned as "totalGoldEarned", l.total_keys as "totalKeys",
             l.prestiges, l.updated_at as "updatedAt"
      from leaderboard_entries l join users u on u.id = l.user_id
-     order by l.total_gold_earned desc
+     order by l.total_keys desc, l.prestiges desc
      limit $1`,
     [limit],
   )
@@ -83,7 +83,8 @@ leaderboardRouter.get('/', async (req, res) => {
 leaderboardRouter.get('/me', requireAuth, async (req, res) => {
   const { rows } = await pool.query(
     `select l.total_gold_earned as "totalGoldEarned", l.total_keys as "totalKeys", l.prestiges,
-            (select count(*) + 1 from leaderboard_entries where total_gold_earned > l.total_gold_earned) as rank
+            (select count(*) + 1 from leaderboard_entries
+             where total_keys > l.total_keys or (total_keys = l.total_keys and prestiges > l.prestiges)) as rank
      from leaderboard_entries l where l.user_id = $1`,
     [req.userId],
   )

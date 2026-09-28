@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import { KeyRound } from 'lucide-react'
 import { api } from './api'
-import { formatNum } from './game'
 
-// onglet Classement : or total gagné, toutes parties confondues (voir server/README.md)
+// onglet Classement : clés de prestige gagnées au total, toutes parties confondues (voir server/README.md)
+// — ce compteur ne change qu'au prestige, contrairement à l'or qui varie en continu
 export default function Leaderboard({ auth, onLogout }) {
   const [rows, setRows] = useState(null) // null = chargement
   const [error, setError] = useState(null)
@@ -26,7 +27,7 @@ export default function Leaderboard({ auth, onLogout }) {
       <div className="section-head">
         <h2>
           Classement
-          <span className="muted">Or total gagné, toutes parties confondues</span>
+          <span className="muted">Clés de prestige gagnées au total, toutes parties confondues</span>
         </h2>
         <button className="btn small ghost" onClick={onLogout}>
           {auth.pseudo} · Se déconnecter
@@ -35,7 +36,7 @@ export default function Leaderboard({ auth, onLogout }) {
 
       {mine && (
         <p className="muted board-mine">
-          Ta position : <b>#{mine.rank}</b> avec {formatNum(Number(mine.totalGoldEarned))} or
+          Ta position : <b>#{mine.rank}</b> avec {mine.totalKeys} <KeyRound size={13} strokeWidth={2.25} />
         </p>
       )}
 
@@ -48,13 +49,13 @@ export default function Leaderboard({ auth, onLogout }) {
           <div className="board-row board-head">
             <span>#</span>
             <span>Joueur</span>
-            <span>Or gagné</span>
+            <span>Clés</span>
           </div>
           {rows.map((r, i) => (
             <div key={r.pseudo} className={`board-row ${r.pseudo === auth?.pseudo ? 'me' : ''}`}>
               <span>{i + 1}</span>
               <span>{r.pseudo}</span>
-              <span>{formatNum(Number(r.totalGoldEarned))}</span>
+              <span>{r.totalKeys}</span>
             </div>
           ))}
         </div>

@@ -72,10 +72,8 @@ import { prefs } from './storage'
 import Auth from './Auth'
 import Leaderboard from './Leaderboard'
 import SaveConflict from './SaveConflict'
-import { loadAuth, saveAuth } from './authStore'
+import { loadAuth, loadRevokedAuth, saveAuth, saveRevokedAuth } from './authStore'
 import { api } from './api'
-
-const SCORE_SYNC_MS = 120000 // fréquence de la soumission automatique au classement
 
 
 export default function App() {
@@ -116,7 +114,11 @@ export default function App() {
   const [pendingAuth, setPendingAuth] = useState(null)
   // { auth, local, remote } quand l'appareil et le compte ont chacun une progression différente
   const [saveConflict, setSaveConflict] = useState(null)
+  // dernier compte de cet appareil dont la session a été invalidée (voir onSyncError) : permet de
+  // reprendre la main sans ressaisir le mot de passe (voir Auth.jsx, handleReclaim)
+  const [revokedAuth, setRevokedAuth] = useState(loadRevokedAuth)
   useEffect(() => saveAuth(auth), [auth])
+  useEffect(() => saveRevokedAuth(revokedAuth), [revokedAuth])
 
   const { income, bonus } = computeStats(state)
 
@@ -128,33 +130,57 @@ export default function App() {
     prestiges: s.prestiges,
   })
 
-  // soumission au classement + sauvegarde : périodique (voir SCORE_SYNC_MS) + juste après connexion. state/income
-  // changent à chaque tick, donc on les lit via une ref (jamais périmée) plutôt que dans les dépendances de l'effet.
+  // enveloppe de sauvegarde à envoyer au serveur : `lastSeen` (dans `state`, comme la sauvegarde locale,
+  // voir game.js) permet à l'appareil qui la récupère de recalculer l'or gagné depuis cet instant plutôt
+  // que de dépendre d'un envoi périodique pour rester à jour (revenu × temps écoulé, déjà comment
+  // fonctionne le gain hors ligne).
+  const buildSavePayload = (s) => ({ version: SAVE_VERSION, savedAt: Date.now(), state: { ...s, lastSeen: Date.now() } })
+
+  // state/income changent à chaque tick, donc on les lit via une ref (jamais périmée) plutôt que dans les
+  // dépendances des effets ci-dessous.
   const latest = useRef({ state, income })
   useEffect(() => {
     latest.current = { state, income }
   })
+
   // une connexion depuis un autre appareil invalide ce jeton côté serveur (une seule session à la fois,
-  // voir server/api/src/middleware/requireAuth.js) : le prochain appel renvoie 401/SESSION_REVOKED, on
-  // déconnecte alors localement pour remontrer l'écran de connexion plutôt que d'insister dans le vide.
-  const onSyncError = (err) => {
-    if (err?.status === 401) setAuth(null)
-  }
-  const syncToServer = useCallback(() => {
-    if (!auth) return
-    const { state: s, income: inc } = latest.current
+  // voir server/api/src/middleware/requireAuth.js) : un appel qui échoue en 401 déconnecte localement
+  // pour remontrer l'écran de connexion plutôt que d'insister dans le vide.
+  const onAuthedCallError = useCallback((a) => (err) => {
+    if (err?.status !== 401) return
+    setRevokedAuth(a)
+    setAuth(null)
+  }, [])
+
+  // sauvegarde côté serveur : événementielle (voir l'effet plus bas, sur les changements de réserve/sac/
+  // talismans/améliorations), pas sur un minuteur — l'or lui-même se recalcule à la volée grâce à
+  // `lastSeen` (voir buildSavePayload), il n'a donc pas besoin d'un envoi régulier pour rester à jour.
+  const saveNow = useCallback((a, s) => {
+    api.putSave(a.token, buildSavePayload(s)).catch(onAuthedCallError(a))
+  }, [onAuthedCallError])
+
+  // classement : compte les clés de prestige (voir Leaderboard.jsx) — ça ne change qu'au prestige, donc
+  // événementiel comme la sauvegarde ci-dessous plutôt que sur un minuteur.
+  const submitScore = useCallback((a, s, inc) => {
     const sum = summarize(s)
     api
-      .submitScore(auth.token, { totalGoldEarned: String(sum.gold), totalKeys: sum.keys, prestiges: sum.prestiges, income: inc })
-      .catch(onSyncError)
-    api.putSave(auth.token, { version: SAVE_VERSION, savedAt: Date.now(), state: s }).catch(onSyncError)
-  }, [auth])
+      .submitScore(a.token, { totalGoldEarned: String(sum.gold), totalKeys: sum.keys, prestiges: sum.prestiges, income: inc })
+      .catch(onAuthedCallError(a))
+  }, [onAuthedCallError])
+
+  // sauvegarde + classement événementiels : dès qu'un changement structurel (réserve, sac, talismans,
+  // améliorations, prestige...) survient — pas à chaque tick d'or, ignoré ici puisqu'absent des
+  // dépendances. Léger anti-rebond pour éviter une rafale de requêtes (ouverture ×10, fusion en cascade...).
   useEffect(() => {
     if (!auth) return
-    syncToServer()
-    const id = setInterval(syncToServer, SCORE_SYNC_MS)
-    return () => clearInterval(id)
-  }, [auth, syncToServer])
+    const id = setTimeout(() => {
+      const { state: s, income: inc } = latest.current
+      saveNow(auth, s)
+      submitScore(auth, s, inc)
+    }, 2500)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth, saveNow, submitScore, liveState.inventory, liveState.equipped, liveState.charms, liveState.slots, liveState.charmSlots, liveState.upgrades, liveState.prestiges, liveState.totalKeys])
 
   // fermeture/masquage d'onglet : tente une dernière sauvegarde fiable via sendBeacon (part même si la
   // page se ferme tout de suite après, contrairement à un fetch classique). auth/state changent souvent :
@@ -168,7 +194,7 @@ export default function App() {
     const beacon = () => {
       const a = authRef.current
       if (!a) return
-      api.beaconSave(a.token, { version: SAVE_VERSION, savedAt: Date.now(), state: latest.current.state })
+      api.beaconSave(a.token, buildSavePayload(latest.current.state))
     }
     const onHide = () => document.visibilityState === 'hidden' && beacon()
     document.addEventListener('visibilitychange', onHide)
@@ -183,6 +209,7 @@ export default function App() {
     setAuth(a)
     setPendingAuth(null)
     setSaveConflict(null)
+    setRevokedAuth(null)
   }
 
   // écrase la partie locale avec celle du serveur (filet de sécurité avant, au cas où) et bascule le jeu
@@ -190,7 +217,7 @@ export default function App() {
   // useGame sur pagehide, avec l'ancien état encore en mémoire, qui écraserait la sauvegarde qu'on vient
   // d'écrire (vécu en test). loadState() met à jour l'état ET persiste dans le même geste.
   const adoptRemote = (payload, a) => {
-    prefs.set('save-backup-before-remote', { version: SAVE_VERSION, savedAt: Date.now(), state: liveState })
+    prefs.set('save-backup-before-remote', buildSavePayload(liveState))
     loadState(migrate(payload))
     finishAuth(a)
   }
@@ -205,7 +232,7 @@ export default function App() {
       // API indisponible : ne jamais bloquer le joueur, il continuera avec sa partie locale
     }
     if (!remote) {
-      await api.putSave(a.token, { version: SAVE_VERSION, savedAt: Date.now(), state: liveState }).catch(() => {})
+      await api.putSave(a.token, buildSavePayload(liveState)).catch(() => {})
       finishAuth(a)
       return
     }
@@ -221,6 +248,14 @@ export default function App() {
       return
     }
     setSaveConflict({ auth: a, local: localSum, remote: remoteSum, remotePayload: remote.payload })
+  }
+
+  // reprend la main sans mot de passe (voir Auth.jsx) : le jeton devenu invalide sert de preuve
+  // d'identité ; en cas d'échec (jeton trop vieux, réseau...) on efface le raccourci et retombe sur le
+  // formulaire classique. Un succès relance la réconciliation normale (l'autre appareil a pu progresser).
+  const handleReclaim = async () => {
+    const a = await api.reclaim(revokedAuth.token)
+    await handleAuthSuccess({ token: a.token, pseudo: a.pseudo })
   }
 
   const used = equippedCount(state.equipped)
@@ -370,14 +405,20 @@ export default function App() {
   if (!auth) {
     return (
       <div className="app">
-        <Auth mandatory checking={!!pendingAuth && !saveConflict} onAuth={handleAuthSuccess} />
+        <Auth
+          mandatory
+          checking={!!pendingAuth && !saveConflict}
+          onAuth={handleAuthSuccess}
+          revoked={revokedAuth}
+          onReclaim={handleReclaim}
+        />
         <AnimatePresence>
           {saveConflict && (
             <SaveConflict
               local={saveConflict.local}
               remote={saveConflict.remote}
               onKeepLocal={() => {
-                api.putSave(saveConflict.auth.token, { version: SAVE_VERSION, savedAt: Date.now(), state: liveState }).catch(() => {})
+                api.putSave(saveConflict.auth.token, buildSavePayload(liveState)).catch(() => {})
                 finishAuth(saveConflict.auth)
               }}
               onKeepRemote={() => adoptRemote(saveConflict.remotePayload, saveConflict.auth)}
