@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { Coins, Zap } from 'lucide-react'
 import {
   ENHANCE_RATES,
   ENHANCE_STEP,
@@ -126,7 +127,7 @@ export default function Forge({ startKey, liveState, onEnhance, onFreeze, onUnfr
             <div>
               <span className="muted">Coût</span>
               <b style={{ color: canPay ? 'var(--gold)' : 'var(--danger)' }}>
-                🪙 {formatNum(cost)} <span className="muted">(tu as {formatNum(liveState.gold)})</span>
+                <Coins size={14} strokeWidth={2.25} /> {formatNum(cost)} <span className="muted">(tu as {formatNum(liveState.gold)})</span>
               </b>
             </div>
             <div>
@@ -143,7 +144,7 @@ export default function Forge({ startKey, liveState, onEnhance, onFreeze, onUnfr
             </div>
           </div>
         )}
-        {item.ability && !maxed && <div className="ability">⚡ {abilityText(item, tier, shiny, level)}</div>}
+        {item.ability && !maxed && <div className="ability"><Zap size={13} strokeWidth={2.25} /> {abilityText(item, tier, shiny, level)}</div>}
         {!maxed && (
           <div className="forge-warning">En cas d'échec, l'exemplaire est détruit. L'or dépensé est perdu.</div>
         )}

@@ -1,3 +1,4 @@
+import { Backpack, Clover, Coins, Gem, Hammer, Layers, Moon, Sparkles, Tag, Wallet } from 'lucide-react'
 import { formatMult } from './format'
 export const RARITIES = {
   commun: { label: 'Commun', color: '#a8b0b8', income: 0.1 },
@@ -333,53 +334,53 @@ export const UPGRADE_STEP = { income: 0.25, luck: 0.05, discount: 0.03, shiny: 0
 // niveau actuel l -> coût du niveau suivant ; effect(l) décrit l'effet au niveau l
 export const UPGRADES = [
   {
-    id: 'income', icon: '💰', name: 'Fortune', max: 40,
+    id: 'income', icon: Coins, name: 'Fortune', max: 40,
     cost: (l) => 2 + 5 * l,
     effect: (l) => `+${Math.round(l * UPGRADE_STEP.income * 100)}% de revenu`,
   },
   {
-    id: 'slots', icon: '🎒', name: 'Grand sac', max: 8,
+    id: 'slots', icon: Backpack, name: 'Grand sac', max: 8,
     cost: (l) => 2 + 3 * l,
     effect: (l) => `Le sac peut monter jusqu'à ${BASE_MAX_SLOTS + l} emplacements (${BASE_MAX_SLOTS} de base)`,
   },
   {
-    id: 'charms', icon: '📿', name: 'Écrin', max: 4,
+    id: 'charms', icon: Gem, name: 'Écrin', max: 4,
     cost: (l) => 4 + 4 * l,
     effect: (l) => `Les talismans peuvent monter jusqu'à ${BASE_MAX_CHARM_SLOTS + l} emplacements (${BASE_MAX_CHARM_SLOTS} de base)`,
   },
   {
-    id: 'gold', icon: '🪙', name: 'Capital de départ', max: 15,
+    id: 'gold', icon: Wallet, name: 'Capital de départ', max: 15,
     cost: (l) => 1 + l,
     effect: (l) => `+${l * UPGRADE_STEP.gold} or au départ de chaque partie`,
   },
   {
-    id: 'luck', icon: '🍀', name: 'Baraka', max: 10,
+    id: 'luck', icon: Clover, name: 'Baraka', max: 10,
     cost: (l) => 3 + 2 * l,
     effect: (l) => `+${Math.round(l * UPGRADE_STEP.luck * 100)}% de chances Légendaire ou mieux`,
   },
   {
-    id: 'discount', icon: '🏷️', name: 'Négociateur', max: 10,
+    id: 'discount', icon: Tag, name: 'Négociateur', max: 10,
     cost: (l) => 3 + 2 * l,
     effect: (l) => `-${Math.round(l * UPGRADE_STEP.discount * 100)}% sur le prix des portes`,
   },
   {
-    id: 'shiny', icon: '✨', name: 'Éclat', max: 10,
+    id: 'shiny', icon: Sparkles, name: 'Éclat', max: 10,
     cost: (l) => 4 + 2 * l,
     effect: (l) => `+${+(l * UPGRADE_STEP.shiny * 100).toFixed(1)} pt de chance shiny`,
   },
   {
-    id: 'fusion', icon: '🔨', name: 'Forge', max: 2,
+    id: 'fusion', icon: Hammer, name: 'Forge', max: 2,
     cost: (l) => [15, 50][l],
     effect: (l) => `Fusion avec ${FUSE_COUNT - l} objets au lieu de ${FUSE_COUNT}`,
   },
   {
-    id: 'offline', icon: '🌙', name: 'Sommeil profond', max: 8,
+    id: 'offline', icon: Moon, name: 'Sommeil profond', max: 8,
     cost: (l) => 3 + 3 * l,
     effect: (l) =>
       `Gain hors ligne : ${Math.round((OFFLINE_BASE_RATE + l * OFFLINE_STEP_RATE) * 100)} % du revenu, jusqu'à ${+(OFFLINE_BASE_HOURS + l * OFFLINE_STEP_HOURS).toFixed(1)} h d'absence`,
   },
   {
-    id: 'batch', icon: '🔓', name: 'Grosses ouvertures', max: 4,
+    id: 'batch', icon: Layers, name: 'Grosses ouvertures', max: 4,
     cost: (l) => [3, 8, 20, 50][l],
     effect: (l) => (l === 0 ? 'Lots jusqu\u2019à ×10' : `Lots jusqu'à ×${BATCH_LIMITS[l]}`),
   },

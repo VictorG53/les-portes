@@ -28,7 +28,7 @@ function Toast({ item, onDone }) {
       transition={{ type: 'spring', stiffness: 300, damping: 26 }}
       onClick={onDone}
     >
-      <span className="toast-icon">{a.icon}</span>
+      <span className="toast-icon"><a.icon size={20} strokeWidth={2} /></span>
       <div>
         <div className="toast-label">Succès débloqué</div>
         <b>{a.name}</b>

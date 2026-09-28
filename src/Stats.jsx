@@ -1,3 +1,4 @@
+import { KeyRound } from 'lucide-react'
 import { ACHIEVEMENTS } from './achievements'
 import { DOORS, ITEMS, QUANTITIES, RARITIES, RARITY_ORDER, UPGRADE_STEP, keyMultiplier, rarityClass, rarityFill, starsText } from './data'
 import { formatMult, formatNum, upLevel } from './game'
@@ -161,7 +162,7 @@ export default function Stats({ state, income, bonus }) {
                 <span>Prestige n°{st.runs.length - i + Math.max(0, state.prestiges - st.runs.length)}</span>
                 <span>{duration(r.seconds)}</span>
                 <span>{formatNum(r.earned)}</span>
-                <span>+{r.keys} 🗝️</span>
+                <span>+{r.keys} <KeyRound size={13} strokeWidth={2.25} /></span>
               </div>
             ))}
             {st.runs.length === 0 && <div className="muted empty-note">Aucun prestige terminé pour l'instant.</div>}

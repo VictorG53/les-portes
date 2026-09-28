@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { Coins } from 'lucide-react'
 import { formatNum } from './game'
 import { play } from './sound'
 
@@ -37,7 +38,7 @@ export default function Welcome({ seconds, gain, rate, capHours, onClose }) {
       >
         <div className="reveal-title">Bon retour !</div>
         <div className="muted">Tu étais absent depuis {duration(seconds)}.</div>
-        <div className="welcome-gain">+{formatNum(gain)} 🪙</div>
+        <div className="welcome-gain">+{formatNum(gain)} <Coins size={30} strokeWidth={2} /></div>
         <div className="muted">
           Tes objets équipés ont continué à rapporter à {Math.round(rate * 100)} % de leur revenu, jusqu'à{' '}
           {+capHours.toFixed(1)} h d'absence.

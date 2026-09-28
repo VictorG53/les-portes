@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
+import { Sparkles, Zap } from 'lucide-react'
 import { RARITIES, RARITY_ORDER, abilityText, itemIncome, rarityClass } from './data'
 import { formatNum } from './game'
 import { playReveal } from './sound'
@@ -61,7 +62,7 @@ export default function Reveal({ results, onClose }) {
         >
           <div className="tt-tags">
             <span className={`chip ${rarityClass(best.rarity)}`}>{RARITIES[best.rarity].label}</span>
-            {bestShiny && <span className="chip shiny-chip">✨ Shiny</span>}
+            {bestShiny && <span className="chip shiny-chip"><Sparkles size={12} strokeWidth={2.25} /> Shiny</span>}
           </div>
           <motion.div
             className={`reveal-badge ${bestShiny ? 'shiny' : ''}`}
@@ -72,11 +73,11 @@ export default function Reveal({ results, onClose }) {
           </motion.div>
           <div className="reveal-name">{best.name}</div>
           {results[0].isNew && <div className="new">NOUVEAU</div>}
-          {!results[0].isNew && results[0].isNewShiny && <div className="new">✨ NOUVEAU SHINY</div>}
+          {!results[0].isNew && results[0].isNewShiny && <div className="new"><Sparkles size={13} strokeWidth={2.25} /> NOUVEAU SHINY</div>}
           <div className="muted">
             {best.ability ? 'Talisman : ne rapporte pas d\u2019or' : `+${formatNum(itemIncome(best, 1, bestShiny))} or/s`}
           </div>
-          {best.ability && <div className="ability">⚡ {abilityText(best, 1, bestShiny)}</div>}
+          {best.ability && <div className="ability"><Zap size={13} strokeWidth={2.25} /> {abilityText(best, 1, bestShiny)}</div>}
           <button className="btn" disabled={!ready} onClick={onClose}>
             Continuer
           </button>
@@ -116,8 +117,8 @@ export default function Reveal({ results, onClose }) {
                       >
                         {(r.isNew || r.isNewShiny) && <span className="mini-new">NEW</span>}
                         {r.count > 1 && <span className="mini-count">×{r.count}</span>}
-                        {r.shiny && <span className="shiny-dot">✨</span>}
-                        {r.item.ability && <span className="ab-dot">⚡</span>}
+                        {r.shiny && <Sparkles className="shiny-dot" size={11} strokeWidth={2.25} />}
+                        {r.item.ability && <Zap className="ab-dot" size={11} strokeWidth={2.25} />}
                         <span className="emoji">{r.item.emoji}</span>
                         <small className={rarityClass(r.item.rarity)}>{RARITIES[r.item.rarity].label}</small>
                       </motion.div>
@@ -130,7 +131,12 @@ export default function Reveal({ results, onClose }) {
           <div className="muted">
             Meilleur : <b style={{ color: bestColor }}>{best.name}</b>
             {newCount > 0 && ` · ${newCount} nouveau${newCount > 1 ? 'x' : ''}`}
-            {shinyCount > 0 && ` · ✨ ${shinyCount} shiny`}
+            {shinyCount > 0 && (
+              <>
+                {' · '}
+                <Sparkles size={13} strokeWidth={2.25} /> {shinyCount} shiny
+              </>
+            )}
           </div>
           <div className="muted">+{formatNum(totalIncome)} or/s au total</div>
           <button className="btn" disabled={!ready} onClick={onClose}>

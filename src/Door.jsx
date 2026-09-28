@@ -1,3 +1,4 @@
+import { Coins, Lock } from 'lucide-react'
 import { RARITIES, RARITY_ORDER, rarityClass, rarityFill } from './data'
 import { adjustedWeights, formatMult, formatNum } from './game'
 import DoorArt from './DoorArt'
@@ -36,11 +37,11 @@ export default function Door({
         </div>
         <div className="door-odds muted">Probabilités inconnues</div>
         <div className="door-price">
-          <span className="cost">🪙 {formatNum(price)}</span>
+          <span className="cost"><Coins size={14} strokeWidth={2.25} /> {formatNum(price)}</span>
           <span className="muted">à atteindre</span>
         </div>
         <button className="btn open-btn" disabled>
-          🔒 Verrouillée
+          <Lock size={14} strokeWidth={2.25} /> Verrouillée
         </button>
       </div>
     )
@@ -136,7 +137,7 @@ export default function Door({
       >
         <button className="btn open-btn" data-tour={tour} disabled={disabled || !affordable} onClick={onOpen}>
           <span className="btn-label">{count > 1 ? `Ouvrir ×${count}` : 'Ouvrir'}</span>
-          <span className="btn-price">🪙 {formatNum(totalCost)}</span>
+          <span className="btn-price"><Coins size={12} strokeWidth={2.25} /> {formatNum(totalCost)}</span>
         </button>
       </Tip>
     </div>

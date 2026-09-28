@@ -1,5 +1,6 @@
 import { cloneElement, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Sparkles, Zap } from 'lucide-react'
 import { RARITIES, SHINY_MULT, abilityText, dropShare, itemIncome, rankInfo, rarityClass, starsText } from './data'
 import { formatNum } from './game'
 
@@ -145,7 +146,7 @@ export function ItemTip({ item, tier = 1, shiny = false, level = 0, hint, lines 
         <span>{item.emoji}</span>
         {item.name}
         {level > 0 && <span className="lvl">+{level}</span>}
-        {shiny && <span>✨</span>}
+        {shiny && <Sparkles size={14} strokeWidth={2.25} />}
       </div>
       <div className="tt-tags">
         <span className={`chip ${rarityClass(item.rarity)}`}>{r.label}</span>
@@ -164,7 +165,7 @@ export function ItemTip({ item, tier = 1, shiny = false, level = 0, hint, lines 
           Revenu <b>+{formatNum(itemIncome(item, tier, shiny, level))} or/s</b>
         </div>
       )}
-      {item.ability && <div className="ability">⚡ {abilityText(item, tier, shiny, level)}</div>}
+      {item.ability && <div className="ability"><Zap size={13} strokeWidth={2.25} /> {abilityText(item, tier, shiny, level)}</div>}
       {shiny && <div className="tt-muted">Version shiny : revenu et capacité ×{SHINY_MULT}</div>}
       {lines.map((l) => (
         <div key={l} className="tt-muted">
