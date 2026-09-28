@@ -381,6 +381,23 @@ export const offlineRate = (s) => OFFLINE_BASE_RATE + upLevel(s, 'offline') * OF
 export const offlineCapHours = (s) => OFFLINE_BASE_HOURS + upLevel(s, 'offline') * OFFLINE_STEP_HOURS
 const AWAY_SECONDS = 3 // au-delà de cet écart entre deux ticks, on considère que le joueur était absent
 const MIN_REPORT_SECONDS = 60 // absence minimale pour afficher l'écran « Bon retour »
+const AFK_IDLE_SECONDS = 600 // sans interaction depuis 10 min (onglet ouvert mais laissé sans y jouer), le revenu passe au régime hors ligne (taux + plafond) : sinon laisser l'onglet ouvert rapporterait plus qu'être vraiment absent
+
+// pendant `dt` secondes sans interaction (onglet resté ouvert) : même régime que hors ligne (taux réduit,
+// plafonné à `offlineCapHours`), pour ne pas avantager un onglet laissé ouvert sans y jouer par rapport à
+// une vraie absence. `idleCounted` (ref, en secondes déjà comptées depuis le début de l'inactivité) est mis
+// à jour ici : ce n'est pas persisté, une simple ref suffit (remise à 0 dès la moindre interaction).
+function applyIdleTick(s, dt, idleCounted) {
+  const capSeconds = offlineCapHours(s) * 3600
+  const remaining = Math.max(0, capSeconds - idleCounted.current)
+  const counted = Math.min(dt, remaining)
+  idleCounted.current += counted
+  const stats = { ...s.stats, playSeconds: s.stats.playSeconds + dt }
+  if (counted <= 0) return { ...s, stats }
+  const income = computeStats(s).income
+  const gain = roundGold(income * counted * offlineRate(s))
+  return { ...s, gold: roundGold(s.gold + gain), runEarned: roundGold(s.runEarned + gain), stats: { ...stats, maxIncome: Math.max(stats.maxIncome, income) } }
+}
 
 // or gagné pendant `seconds` secondes d'absence
 const offlineGain = (s, seconds) =>
@@ -611,11 +628,28 @@ export function useGame({ load, save, clear }) {
   })
   const stateRef = useRef(state)
   const lastTick = useRef(0)
+  const lastActivity = useRef(null) // dernière interaction (clic, touche, molette) : voir applyIdleTick, initialisée ci-dessous
+  const idleCounted = useRef(0) // secondes déjà comptées dans le plafond hors-ligne depuis le début de l'inactivité
   const [toasts, setToasts] = useState([]) // succès à annoncer : [{ key, id }]
   const [welcome, setWelcome] = useState(null) // { seconds, gain } affiché au retour du joueur
   useEffect(() => {
     stateRef.current = state
   }, [state])
+
+  // détecte l'inactivité (onglet ouvert mais laissé sans y jouer, voir AFK_IDLE_SECONDS) : n'importe quelle
+  // interaction relance le compteur.
+  useEffect(() => {
+    const onActivity = () => {
+      lastActivity.current = Date.now()
+      idleCounted.current = 0
+    }
+    onActivity() // initialise au montage (mesurer l'inactivité depuis le début de la partie, pas depuis `null`)
+    const events = ['pointerdown', 'keydown', 'wheel']
+    for (const e of events) window.addEventListener(e, onActivity, { passive: true })
+    return () => {
+      for (const e of events) window.removeEventListener(e, onActivity)
+    }
+  }, [])
 
   // revenu passif, calculé sur l'horloge réelle : un onglet en arrière-plan ou un ordinateur en veille ne fait rien perdre
   useEffect(() => {
@@ -626,9 +660,17 @@ export function useGame({ load, save, clear }) {
       lastTick.current = now
       if (gap <= 0) return // horloge revenue en arrière : on ignore
       if (gap <= AWAY_SECONDS) {
-        setState((s) => tickState(s, gap))
+        const idleFor = (now - (lastActivity.current ?? now)) / 1000
+        if (idleFor >= AFK_IDLE_SECONDS) {
+          setState((s) => applyIdleTick(s, gap, idleCounted))
+        } else {
+          setState((s) => tickState(s, gap))
+        }
         return
       }
+      // vraie absence (voir plus bas) : elle couvre déjà tout le plafond hors-ligne pour cette durée,
+      // l'inactivité qui suit ne doit rien recompter tant que le joueur n'a pas à nouveau interagi
+      idleCounted.current = offlineCapHours(stateRef.current) * 3600
       const gain = offlineGain(stateRef.current, gap)
       setState((s) => applyOffline(s, gap))
       if (gain > 0 && gap >= MIN_REPORT_SECONDS) {
