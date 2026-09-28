@@ -321,9 +321,8 @@ export default function App() {
     prestige: gain >= 1 ? `+${gain}` : null,
   }
 
-  // porte lointaine : jamais encore ouverte, et hors de portée pour l'instant
-  const isHidden = (door, i) =>
-    i > (state.stats.maxDoor ?? 0) && state.gold < doorPrice(door, bonus.discount, bonus.permanent)
+  // porte lointaine : jamais encore devenue abordable (une fois découverte, elle le reste, voir game.js `maxSeenDoor`)
+  const isHidden = (door, i) => i > (state.stats.maxSeenDoor ?? 0)
   const onOpen = (door) => {
     if (opening || reveal) return
     const results = openDoor(door.id, qty)

@@ -1,5 +1,5 @@
 import { DOORS, parseKey } from './data'
-import { bestEquipment, createState, isCharm, roundGold } from './game'
+import { bestEquipment, computeStats, createState, doorPrice, isCharm, roundGold } from './game'
 import { gameStorage, prefs } from './storage'
 
 // Sauvegarde de la partie : format versionné, prêt à être synchronisé avec un serveur.
@@ -64,7 +64,19 @@ const MIGRATIONS = [
 // complète les champs manquants avec ceux d'une partie neuve (y compris dans `stats`)
 function normalize(state) {
   const fresh = createState()
-  return { ...fresh, ...state, stats: { ...fresh.stats, ...state.stats } }
+  const stats = { ...fresh.stats, ...state.stats }
+  // ancienne sauvegarde sans ce compteur : on le reconstitue d'après l'or actuel, pour ne pas re-cacher
+  // une porte déjà découverte (elle n'était visible jusqu'ici que tant qu'elle restait abordable)
+  if (state.stats?.maxSeenDoor === undefined) {
+    const { bonus } = computeStats({ ...state, stats })
+    let idx = stats.maxDoor ?? 0
+    for (let i = idx + 1; i < DOORS.length; i++) {
+      if ((state.gold ?? 0) < doorPrice(DOORS[i], bonus.discount, bonus.permanent)) break
+      idx = i
+    }
+    stats.maxSeenDoor = idx
+  }
+  return { ...fresh, ...state, stats }
 }
 
 // remet une sauvegarde de n'importe quelle version à la version courante

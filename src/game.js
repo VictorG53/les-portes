@@ -59,6 +59,9 @@ const initialState = {
     maxAway: 0,
     maxEnhance: 0,
     maxDoor: 0, // indice de la porte la plus chère déjà ouverte
+    // indice de la porte la plus chère déjà devenue abordable au moins une fois : une fois découverte
+    // (son nom affiché à la place de « ??? »), elle le reste, même si on n'a plus assez d'or pour l'ouvrir
+    maxSeenDoor: 0,
     maxIncome: 0, // revenu par seconde le plus élevé atteint
     playSeconds: 0, // temps de jeu actif
     awaySeconds: 0, // temps total passé absent
@@ -399,18 +402,30 @@ export function applyOffline(s, seconds) {
 }
 
 // avance le temps de dt secondes : revenu passif
+// indice de la porte la plus chère actuellement abordable (or actuel, avec les bonus en cours)
+const seenDoorIndex = (s, bonus) => {
+  let idx = s.stats.maxSeenDoor ?? 0
+  for (let i = idx + 1; i < DOORS.length; i++) {
+    if (s.gold < doorPrice(DOORS[i], bonus.discount, bonus.permanent)) break
+    idx = i
+  }
+  return idx
+}
+
 export function tickState(s, dt) {
-  const { income } = computeStats(s)
+  const { income, bonus } = computeStats(s)
   const inc = income * dt
+  const gold = roundGold(s.gold + inc)
   return {
     ...s,
-    gold: roundGold(s.gold + inc),
+    gold,
     runEarned: roundGold(s.runEarned + inc),
     runSeconds: s.runSeconds + dt,
     stats: {
       ...s.stats,
       playSeconds: s.stats.playSeconds + dt,
       maxIncome: Math.max(s.stats.maxIncome, income),
+      maxSeenDoor: seenDoorIndex({ ...s, gold }, bonus),
     },
   }
 }
