@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { api } from './api'
 
-// modale de connexion / inscription au compte du classement (indépendant de la sauvegarde de partie)
-export default function Auth({ onClose, onAuth }) {
+// modale de connexion / inscription. `mandatory` : impossible à fermer, un compte est requis pour jouer.
+// `checking` : identifiants acceptés, réconciliation de la sauvegarde avec le serveur en cours (voir App.jsx).
+export default function Auth({ onClose, onAuth, mandatory = false, checking = false }) {
   const [mode, setMode] = useState('login') // 'login' | 'register'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,7 +28,13 @@ export default function Auth({ onClose, onAuth }) {
   }
 
   return (
-    <motion.div className="overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+    <motion.div
+      className="overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={mandatory ? undefined : onClose}
+    >
       <motion.div
         className="reveal auth"
         role="dialog"
@@ -39,11 +46,20 @@ export default function Auth({ onClose, onAuth }) {
         transition={{ type: 'spring', stiffness: 300, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="reveal-title">{mode === 'login' ? 'Connexion' : 'Créer un compte'}</div>
+        <div className="reveal-title">
+          {checking ? 'Un instant…' : mode === 'login' ? 'Connexion' : 'Créer un compte'}
+        </div>
         <p className="muted">
-          Un compte permet d'apparaître dans le classement des joueurs. Ta partie reste sur cet appareil.
+          {checking
+            ? 'Récupération de ta progression…'
+            : mandatory
+              ? 'Un compte est nécessaire pour jouer : ta progression est sauvegardée et retrouvable sur tous tes appareils.'
+              : "Un compte permet d'apparaître dans le classement des joueurs et de retrouver ta partie sur un autre appareil."}
         </p>
 
+        {checking && <div className="auth-checking" aria-hidden="true" />}
+
+        {!checking && (
         <form className="auth-form" onSubmit={submit}>
           <label>
             Email
@@ -87,15 +103,19 @@ export default function Auth({ onClose, onAuth }) {
           {error && <div className="auth-error">{error}</div>}
 
           <div className="confirm-actions">
-            <button type="button" className="btn ghost" disabled={busy} onClick={onClose}>
-              Fermer
-            </button>
+            {!mandatory && (
+              <button type="button" className="btn ghost" disabled={busy} onClick={onClose}>
+                Fermer
+              </button>
+            )}
             <button type="submit" className="btn" disabled={busy}>
               {busy ? 'Un instant…' : mode === 'login' ? 'Se connecter' : "S'inscrire"}
             </button>
           </div>
         </form>
+        )}
 
+        {!checking && (
         <button
           type="button"
           className="link auth-switch"
@@ -106,6 +126,7 @@ export default function Auth({ onClose, onAuth }) {
         >
           {mode === 'login' ? "Pas encore de compte ? S'inscrire" : 'Déjà un compte ? Se connecter'}
         </button>
+        )}
       </motion.div>
     </motion.div>
   )

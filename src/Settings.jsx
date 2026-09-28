@@ -43,7 +43,7 @@ function Toggle({ checked, onChange, label }) {
 }
 
 // fenêtre des réglages de l'appareil (ils ne font pas partie de la sauvegarde de la partie)
-export default function Settings({ settings, onChange, onClose, onResetGame, onReplayTutorial, auth, onLogin, onLogout }) {
+export default function Settings({ settings, onChange, onClose, onResetGame, onReplayTutorial, auth, onLogout }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -118,19 +118,11 @@ export default function Settings({ settings, onChange, onClose, onResetGame, onR
 
         <div className="settings-group">
           <div className="settings-title">Compte</div>
-          {auth ? (
-            <Row title={auth.pseudo} hint="Ta progression est envoyée au classement toutes les 2 minutes.">
-              <button className="btn small ghost" onClick={onLogout}>
-                Se déconnecter
-              </button>
-            </Row>
-          ) : (
-            <Row title="Non connecté" hint="Connecte-toi pour apparaître dans le classement des joueurs.">
-              <button className="btn small" onClick={onLogin}>
-                Se connecter
-              </button>
-            </Row>
-          )}
+          <Row title={auth.pseudo} hint="Ta progression est synchronisée avec le compte toutes les 2 minutes.">
+            <button className="btn small ghost" onClick={onLogout}>
+              Se déconnecter
+            </button>
+          </Row>
         </div>
 
         <div className="settings-group">

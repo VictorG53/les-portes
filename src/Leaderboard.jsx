@@ -3,10 +3,10 @@ import { api } from './api'
 import { formatNum } from './game'
 
 // onglet Classement : or total gagné, toutes parties confondues (voir server/README.md)
-export default function Leaderboard({ auth, onLogin, onLogout }) {
+export default function Leaderboard({ auth, onLogout }) {
   const [rows, setRows] = useState(null) // null = chargement
   const [error, setError] = useState(null)
-  const [mine, setMine] = useState(null) // { rank, totalGoldEarned, ... } si connecté
+  const [mine, setMine] = useState(null) // { rank, totalGoldEarned, ... }
 
   useEffect(() => {
     let cancelled = false
@@ -15,7 +15,7 @@ export default function Leaderboard({ auth, onLogin, onLogout }) {
       .leaderboard()
       .then((r) => !cancelled && setRows(r))
       .catch((e) => !cancelled && setError(e.message))
-    if (auth) api.myRank(auth.token).then((r) => !cancelled && setMine(r)).catch(() => {})
+    api.myRank(auth.token).then((r) => !cancelled && setMine(r)).catch(() => {})
     return () => {
       cancelled = true
     }
@@ -28,15 +28,9 @@ export default function Leaderboard({ auth, onLogin, onLogout }) {
           Classement
           <span className="muted">Or total gagné, toutes parties confondues</span>
         </h2>
-        {auth ? (
-          <button className="btn small ghost" onClick={onLogout}>
-            {auth.pseudo} · Se déconnecter
-          </button>
-        ) : (
-          <button className="btn small" onClick={onLogin}>
-            Se connecter pour apparaître ici
-          </button>
-        )}
+        <button className="btn small ghost" onClick={onLogout}>
+          {auth.pseudo} · Se déconnecter
+        </button>
       </div>
 
       {mine && (

@@ -704,8 +704,16 @@ export function useGame({ load, save, clear }) {
     setState(createState())
   }, [])
 
+  // remplace toute la partie par un état déjà prêt (ex. sauvegarde récupérée d'un autre appareil, voir
+  // App.jsx). Persiste immédiatement : ne dépend pas de la sauvegarde périodique (toutes les 2 s).
+  const loadState = useCallback((next) => {
+    io.current.save(next)
+    setState(next)
+  }, [])
+
   return {
     state,
+    loadState,
     welcome,
     closeWelcome: () => setWelcome(null),
     toasts,

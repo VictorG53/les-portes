@@ -3,6 +3,7 @@ import cors from 'cors'
 import express from 'express'
 import { authRouter } from './routes/auth.js'
 import { leaderboardRouter } from './routes/leaderboard.js'
+import { saveRouter } from './routes/save.js'
 import { migrate } from './migrate.js'
 
 const PORT = process.env.PORT || 3001
@@ -16,11 +17,12 @@ app.use(
     origin: ALLOWED_ORIGINS.length ? ALLOWED_ORIGINS : true,
   }),
 )
-app.use(express.json())
+app.use(express.json({ limit: '512kb' })) // une grosse collection peut dépasser la limite par défaut (100kb)
 
 app.get('/health', (req, res) => res.json({ ok: true }))
 app.use('/auth', authRouter)
 app.use('/leaderboard', leaderboardRouter)
+app.use('/save', saveRouter)
 
 // gestionnaire d'erreurs générique : ne renvoie jamais la trace au client
 app.use((err, req, res, next) => {

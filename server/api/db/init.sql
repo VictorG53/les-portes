@@ -23,3 +23,12 @@ create table if not exists leaderboard_entries (
 );
 
 create index if not exists leaderboard_entries_gold_idx on leaderboard_entries (total_gold_earned desc);
+
+-- sauvegarde complète de la partie (synchronisation entre appareils) : l'enveloppe { version, savedAt, state }
+-- produite par src/save.js côté client, stockée telle quelle. Pas de validation de forme : ce n'est pas une
+-- donnée compétitive (contrairement au classement), une valeur farfelue ne pénalise que son propre joueur.
+create table if not exists saves (
+  user_id uuid primary key references users(id) on delete cascade,
+  payload jsonb not null,
+  updated_at timestamptz not null default now()
+);

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, MotionConfig } from 'framer-motion'
 import {
+  Backpack, Clover, Flame, Gem, Hammer, HelpCircle, KeyRound, Lock, Settings as SettingsIcon,
+  Sparkles, Star, Tag, TrendingUp, Trophy, Volume2, VolumeX, Zap,
+} from 'lucide-react'
+import {
   DOORS,
   ENHANCE_RATES,
   ITEMS,
@@ -63,9 +67,11 @@ import Tip, { ItemTip, Text } from './Tip'
 import { play } from './sound'
 import Settings from './Settings'
 import { applySettings, loadSettings, saveSettings } from './settingsStore'
-import { clearGame, loadGame, saveGame } from './save'
+import { clearGame, loadGame, saveGame, migrate, SAVE_VERSION } from './save'
+import { prefs } from './storage'
 import Auth from './Auth'
 import Leaderboard from './Leaderboard'
+import SaveConflict from './SaveConflict'
 import { loadAuth, saveAuth } from './authStore'
 import { api } from './api'
 
@@ -73,7 +79,7 @@ const SCORE_SYNC_MS = 120000 // fréquence de la soumission automatique au class
 
 
 export default function App() {
-  const { state: liveState, welcome, closeWelcome, toasts, dismissToast, openDoor, equip, unequip, fuse, setAutoFuse, autoEquip, buySlot, buyCharmSlot, enhance, sellDuplicates, prestige, setTutorial, buyUpgrade, reset } =
+  const { state: liveState, loadState, welcome, closeWelcome, toasts, dismissToast, openDoor, equip, unequip, fuse, setAutoFuse, autoEquip, buySlot, buyCharmSlot, enhance, sellDuplicates, prestige, setTutorial, buyUpgrade, reset } =
     useGame({ load: loadGame, save: saveGame, clear: clearGame })
   const [reveal, setReveal] = useState(null) // liste de { item, isNew }
   // Photo de la partie prise juste avant l'ouverture d'une porte : l'affichage (objets, sacs, collection, bonus...)
@@ -103,33 +109,90 @@ export default function App() {
   }, [settings])
   const [opening, setOpening] = useState(null) // id de la porte en cours d'ouverture
 
-  // compte joueur (classement) : { token, pseudo } | null, indépendant de la sauvegarde de partie
+  // compte joueur : { token, pseudo } | null. Obligatoire pour jouer (voir le garde-fou en fin de fonction) ;
+  // sert aussi au classement et à la sauvegarde synchronisée entre appareils.
   const [auth, setAuth] = useState(loadAuth)
-  const [showAuth, setShowAuth] = useState(false)
+  // identifiants acceptés, réconciliation de la sauvegarde avec le serveur en cours (voir handleAuthSuccess)
+  const [pendingAuth, setPendingAuth] = useState(null)
+  // { auth, local, remote } quand l'appareil et le compte ont chacun une progression différente
+  const [saveConflict, setSaveConflict] = useState(null)
   useEffect(() => saveAuth(auth), [auth])
 
   const { income, bonus } = computeStats(state)
 
-  // soumission au classement : périodique (voir SCORE_SYNC_MS) + juste après chaque prestige. state/income
+  // résumé d'une partie, pour comparer/afficher (classement, détection de conflit de sauvegarde)
+  const summarize = (s) => ({
+    gold: Math.round(s.stats.earnedBefore + s.runEarned + s.stats.offlineGold),
+    opened: s.opened,
+    keys: s.totalKeys,
+    prestiges: s.prestiges,
+  })
+
+  // soumission au classement + sauvegarde : périodique (voir SCORE_SYNC_MS) + juste après connexion. state/income
   // changent à chaque tick, donc on les lit via une ref (jamais périmée) plutôt que dans les dépendances de l'effet.
   const latest = useRef({ state, income })
   useEffect(() => {
     latest.current = { state, income }
   })
-  const submitScore = useCallback(() => {
+  const syncToServer = useCallback(() => {
     if (!auth) return
     const { state: s, income: inc } = latest.current
-    const totalGoldEarned = Math.round(s.stats.earnedBefore + s.runEarned + s.stats.offlineGold)
+    const sum = summarize(s)
     api
-      .submitScore(auth.token, { totalGoldEarned: String(totalGoldEarned), totalKeys: s.totalKeys, prestiges: s.prestiges, income: inc })
+      .submitScore(auth.token, { totalGoldEarned: String(sum.gold), totalKeys: sum.keys, prestiges: sum.prestiges, income: inc })
       .catch(() => {}) // le classement ne doit jamais gêner le jeu
+    api.putSave(auth.token, { version: SAVE_VERSION, savedAt: Date.now(), state: s }).catch(() => {})
   }, [auth])
   useEffect(() => {
     if (!auth) return
-    submitScore()
-    const id = setInterval(submitScore, SCORE_SYNC_MS)
+    syncToServer()
+    const id = setInterval(syncToServer, SCORE_SYNC_MS)
     return () => clearInterval(id)
-  }, [auth, submitScore])
+  }, [auth, syncToServer])
+
+  const finishAuth = (a) => {
+    setAuth(a)
+    setPendingAuth(null)
+    setSaveConflict(null)
+  }
+
+  // écrase la partie locale avec celle du serveur (filet de sécurité avant, au cas où) et bascule le jeu
+  // dessus immédiatement — pas de rechargement de page : ça déclencherait la sauvegarde automatique de
+  // useGame sur pagehide, avec l'ancien état encore en mémoire, qui écraserait la sauvegarde qu'on vient
+  // d'écrire (vécu en test). loadState() met à jour l'état ET persiste dans le même geste.
+  const adoptRemote = (payload, a) => {
+    prefs.set('save-backup-before-remote', { version: SAVE_VERSION, savedAt: Date.now(), state: liveState })
+    loadState(migrate(payload))
+    finishAuth(a)
+  }
+
+  // connexion/inscription réussie : réconcilie la sauvegarde locale avec celle du compte avant de laisser jouer
+  const handleAuthSuccess = async (a) => {
+    setPendingAuth(a)
+    let remote = null
+    try {
+      remote = await api.getSave(a.token)
+    } catch {
+      // API indisponible : ne jamais bloquer le joueur, il continuera avec sa partie locale
+    }
+    if (!remote) {
+      await api.putSave(a.token, { version: SAVE_VERSION, savedAt: Date.now(), state: liveState }).catch(() => {})
+      finishAuth(a)
+      return
+    }
+    if (liveState.opened === 0) {
+      adoptRemote(remote.payload, a)
+      return
+    }
+    const localSum = summarize(liveState)
+    const remoteSum = summarize(migrate(remote.payload))
+    const same = localSum.gold === remoteSum.gold && localSum.keys === remoteSum.keys && localSum.prestiges === remoteSum.prestiges && localSum.opened === remoteSum.opened
+    if (same) {
+      finishAuth(a)
+      return
+    }
+    setSaveConflict({ auth: a, local: localSum, remote: remoteSum, remotePayload: remote.payload })
+  }
 
   const used = equippedCount(state.equipped)
   const charmsUsed = equippedCount(state.charms)
@@ -206,7 +269,7 @@ export default function App() {
           }}
         >
           {tier > 1 && <span className="stars">{starsText(tier)}</span>}
-          {shiny && <span className="shiny-dot">✨</span>}
+          {shiny && <Sparkles className="shiny-dot" size={11} strokeWidth={2} />}
           {level > 0 && <span className="lvl-dot">+{level}</span>}
           <span className="emoji">{item.emoji}</span>
           {charm ? (
@@ -227,7 +290,7 @@ export default function App() {
       <Tip key={key + i} content={<ItemTip item={item} tier={tier} shiny={shiny} level={level} />}>
         <div className={`slot mini ${shiny ? 'shiny' : ''}`} style={{ '--c': r.color }}>
           {tier > 1 && <span className="stars">{starsText(tier)}</span>}
-          {shiny && <span className="shiny-dot">✨</span>}
+          {shiny && <Sparkles className="shiny-dot" size={11} strokeWidth={2} />}
           {level > 0 && <span className="lvl-dot">+{level}</span>}
           <span className="emoji">{item.emoji}</span>
           {charm ? (
@@ -274,6 +337,29 @@ export default function App() {
     }, 1100)
   }
 
+  // un compte est nécessaire pour jouer (sauvegarde synchronisée) : rien d'autre ne se monte tant qu'on
+  // n'est pas connecté, ou que la réconciliation de la sauvegarde (ci-dessus) n'est pas terminée
+  if (!auth) {
+    return (
+      <div className="app">
+        <Auth mandatory checking={!!pendingAuth && !saveConflict} onAuth={handleAuthSuccess} />
+        <AnimatePresence>
+          {saveConflict && (
+            <SaveConflict
+              local={saveConflict.local}
+              remote={saveConflict.remote}
+              onKeepLocal={() => {
+                api.putSave(saveConflict.auth.token, { version: SAVE_VERSION, savedAt: Date.now(), state: liveState }).catch(() => {})
+                finishAuth(saveConflict.auth)
+              }}
+              onKeepRemote={() => adoptRemote(saveConflict.remotePayload, saveConflict.auth)}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+    )
+  }
+
   // les animations JavaScript (porte qui s'ouvre, fenêtres, notifications) suivent le même réglage que le CSS
   const motionMode = { auto: 'user', reduce: 'always', full: 'never' }[settings.motion]
   return (
@@ -302,7 +388,7 @@ export default function App() {
                     play('qty')
                   }}
                 >
-                  <span className="tab-icon">{t.icon}</span>
+                  <t.icon className="tab-icon" size={18} strokeWidth={2.25} aria-hidden="true" />
                   <span className="tab-label">{t.label}</span>
                   {badge && <span className="tab-badge">{badge}</span>}
                 </button>
@@ -323,7 +409,7 @@ export default function App() {
                 <Tip content={<Text title="Clés">Clés à dépenser dans le Portail éternel. Chaque clé gagnée augmente ton revenu pour toujours (actuellement ×{keysMult}).</Text>}>
                   <div className="stat">
                     <span>Clés</span>
-                    <b>🗝️ {state.keys}</b>
+                    <b><KeyRound size={14} strokeWidth={2.5} /> {state.keys}</b>
                   </div>
                 </Tip>
               )}
@@ -345,12 +431,12 @@ export default function App() {
                   if (muted) setTimeout(() => play('click'), 60) // le son est réactivé après le rendu
                 }}
               >
-                {muted ? '🔇' : '🔊'}
+                {muted ? <VolumeX size={18} strokeWidth={2} /> : <Volume2 size={18} strokeWidth={2} />}
               </button>
             </Tip>
             <Tip content={<Text>Réglages</Text>}>
               <button className="mute" aria-label="Réglages" onClick={() => setShowSettings(true)}>
-                ⚙️
+                <SettingsIcon size={18} strokeWidth={2} />
               </button>
             </Tip>
           </div>
@@ -379,7 +465,7 @@ export default function App() {
                     }
                   >
                     <button className="locked-qty" disabled>
-                      🔒 ×{q}
+                      <Lock size={12} strokeWidth={2.5} /> ×{q}
                     </button>
                   </Tip>
                 ) : (
@@ -558,39 +644,39 @@ export default function App() {
           <div className="bonuses">
             {bonus.achievements > 0 && (
               <Tip content={<Text title="Succès">Les succès débloqués augmentent ton revenu de {Math.round(bonus.achievements * 100)} % pour toujours.</Text>}>
-                <span>🏆 Succès +{Math.round(bonus.achievements * 100)}%</span>
+                <span><Trophy size={13} strokeWidth={2.25} /> Succès +{Math.round(bonus.achievements * 100)}%</span>
               </Tip>
             )}
             {bonus.prestige > 1 && (
               <Tip content={<Text title="Prestige">Multiplicateur permanent : améliorations et clés (×{keysMult} pour {state.totalKeys} clé{state.totalKeys > 1 ? 's' : ''}).</Text>}>
-                <span>🗝️ Prestige ×{formatMult(bonus.prestige)}</span>
+                <span><KeyRound size={13} strokeWidth={2.25} /> Prestige ×{formatMult(bonus.prestige)}</span>
               </Tip>
             )}
             {bonus.best > 0 && (
               <Tip content={<Text title="Meilleur objet">Le meilleur objet équipé rapporte ×{formatMult(1 + bonus.best)}.</Text>}>
-                <span>⭐ Meilleur objet ×{formatMult(1 + bonus.best)}</span>
+                <span><Star size={13} strokeWidth={2.25} /> Meilleur objet ×{formatMult(1 + bonus.best)}</span>
               </Tip>
             )}
             {bonus.global > 0 && (
               <Tip content={<Text title="Revenu total">Ton revenu total est augmenté de {Math.round(bonus.global * 100)} %.</Text>}>
-                <span>📈 +{Math.round(bonus.global * 100)}% revenu</span>
+                <span><TrendingUp size={13} strokeWidth={2.25} /> +{Math.round(bonus.global * 100)}% revenu</span>
               </Tip>
             )}
             {Object.entries(bonus.rarity).map(([r, v]) => (
               <Tip key={r} content={<Text title={`Objets ${RARITIES[r].label}s`}>Les objets {RARITIES[r].label}s équipés rapportent ×{formatMult(1 + v)}.</Text>}>
                 <span>
-                  🔥 {RARITIES[r].label}s ×{formatMult(1 + v)}
+                  <Flame size={13} strokeWidth={2.25} /> {RARITIES[r].label}s ×{formatMult(1 + v)}
                 </span>
               </Tip>
             ))}
             {bonus.luck > 0 && (
               <Tip content={<Text title="Chance">Les raretés Légendaire et au-dessus sortent {Math.round(bonus.luck * 100)} % plus souvent.</Text>}>
-                <span>🍀 +{Math.round(bonus.luck * 100)}% chance</span>
+                <span><Clover size={13} strokeWidth={2.25} /> +{Math.round(bonus.luck * 100)}% chance</span>
               </Tip>
             )}
             {bonus.discount > 0 && (
               <Tip content={<Text title="Réduction">Les portes coûtent {Math.round(bonus.discount * 100)} % moins cher (maximum 50 %).</Text>}>
-                <span>💰 -{Math.round(bonus.discount * 100)}% prix des portes</span>
+                <span><Tag size={13} strokeWidth={2.25} /> -{Math.round(bonus.discount * 100)}% prix des portes</span>
               </Tip>
             )}
           </div>
@@ -603,7 +689,13 @@ export default function App() {
         <section className="inventory">
           <div className="section-head">
             <h2>
-              Réserve · {owned}/{ITEMS.length} découverts{shinyOwned > 0 && ` · ✨ ${shinyOwned} shiny`}
+              Réserve · {owned}/{ITEMS.length} découverts
+              {shinyOwned > 0 && (
+                <>
+                  {' · '}
+                  <Sparkles size={16} strokeWidth={2.25} /> {shinyOwned} shiny
+                </>
+              )}
               <span className="muted">Tous les objets obtenus · cliquer pour équiper</span>
             </h2>
             <div className="row">
@@ -669,7 +761,7 @@ export default function App() {
                 return (
                   <Tip key={card.item.id} content={<Text title="Non découvert">Un objet {r.label} que tu n'as pas encore obtenu.</Text>}>
                     <div className="card locked" style={{ '--c': r.color }}>
-                      <div className="badge-emoji">❔</div>
+                      <div className="badge-emoji"><HelpCircle size={26} strokeWidth={2} /></div>
                       <div className="name">???</div>
                       <span className={`chip ${rarityClass(card.item.rarity)}`}>{r.label}</span>
                     </div>
@@ -712,7 +804,11 @@ export default function App() {
                     play('equip')
                   }}
                 >
-                  {e > 0 && <div className="pill eq">{charm ? '📿' : '🎒'} {e}</div>}
+                  {e > 0 && (
+                    <div className="pill eq">
+                      {charm ? <Gem size={11} strokeWidth={2.25} /> : <Backpack size={11} strokeWidth={2.25} />} {e}
+                    </div>
+                  )}
                   {n > 1 && <div className="pill count">×{n}</div>}
                   <div className="badge-emoji">{item.emoji}</div>
                   <div className="name">
@@ -722,12 +818,12 @@ export default function App() {
                     </span>
                   </div>
                   <div className="stars-row">
-                    {shiny && <b>✨ SHINY </b>}
+                    {shiny && <b><Sparkles size={13} strokeWidth={2.25} /> SHINY </b>}
                     {tier > 1 && starsText(tier)}
                   </div>
                   <span className={`chip ${rarityClass(item.rarity)}`}>{r.label}</span>
                   <div className="inc">{charm ? 'Talisman' : `+${formatNum(itemIncome(item, tier, shiny, level))}/s`}</div>
-                  {item.ability && <div className="ability">⚡ {abilityText(item, tier, shiny, level)}</div>}
+                  {item.ability && <div className="ability"><Zap size={13} strokeWidth={2.25} /> {abilityText(item, tier, shiny, level)}</div>}
                   <div className="card-actions">
                   {tier < MAX_TIER && level === 0 && (
                     <button
@@ -753,7 +849,7 @@ export default function App() {
                         setForgeKey(k)
                       }}
                     >
-                      <span>⚒ +{level + 1}</span>
+                      <span><Hammer size={13} strokeWidth={2.25} /> +{level + 1}</span>
                     </button>
                   )}
                   </div>
@@ -798,7 +894,7 @@ export default function App() {
                   const [value, target] = a.progress(state, { income })
                   return (
                     <div key={a.id} className={`ach ${done ? 'done' : ''}`}>
-                      <div className="ach-icon">{done ? a.icon : '🔒'}</div>
+                      <div className="ach-icon">{done ? <a.icon size={20} strokeWidth={2} /> : <Lock size={18} strokeWidth={2} />}</div>
                       <div className="ach-body">
                         <b>{a.name}</b>
                         <span className="muted">{a.desc}</span>
@@ -829,7 +925,7 @@ export default function App() {
         <section className="prestige">
           <div className="section-head">
             <h2>
-              Portail éternel · 🗝️ {state.keys} clé{state.keys > 1 ? 's' : ''}
+              Portail éternel · <KeyRound size={16} strokeWidth={2.25} /> {state.keys} clé{state.keys > 1 ? 's' : ''}
               <span className="muted">
                 Recommence à zéro pour gagner des clés. Chaque clé gagnée augmente ton revenu pour toujours
                 {state.totalKeys > 0 && ` (actuellement ×${keysMult})`}, avec des rendements décroissants.
@@ -865,7 +961,7 @@ export default function App() {
                 disabled={gain < 1}
                 onClick={() => setConfirm('prestige')}
               >
-                Franchir le Portail (+{gain} 🗝️)
+                Franchir le Portail (+{gain} <KeyRound size={15} strokeWidth={2.25} />)
               </button>
             </Tip>
           </div>
@@ -878,7 +974,7 @@ export default function App() {
               return (
                 <div key={up.id} className="upgrade">
                   <div className="upgrade-head">
-                    <span className="upgrade-icon">{up.icon}</span>
+                    <span className="upgrade-icon"><up.icon size={20} strokeWidth={2} /></span>
                     <div>
                       <h3>{up.name}</h3>
                       <span className="muted">
@@ -896,7 +992,7 @@ export default function App() {
                       play('buy')
                     }}
                   >
-                    {maxed ? 'Niveau maximum' : `Améliorer · ${cost} 🗝️`}
+                    {maxed ? 'Niveau maximum' : <>Améliorer · {cost} <KeyRound size={14} strokeWidth={2.25} /></>}
                   </button>
                 </div>
               )
@@ -906,7 +1002,7 @@ export default function App() {
         )}
 
         {tab === 'leaderboard' && (
-          <Leaderboard auth={auth} onLogin={() => setShowAuth(true)} onLogout={() => setAuth(null)} />
+          <Leaderboard auth={auth} onLogout={() => setAuth(null)} />
         )}
       </main>
 
@@ -947,20 +1043,7 @@ export default function App() {
               setTutorial({ step: 0, done: false, seen: {} })
             }}
             auth={auth}
-            onLogin={() => {
-              setShowSettings(false)
-              setShowAuth(true)
-            }}
             onLogout={() => setAuth(null)}
-          />
-        )}
-        {showAuth && (
-          <Auth
-            onClose={() => setShowAuth(false)}
-            onAuth={(a) => {
-              setAuth(a)
-              setShowAuth(false)
-            }}
           />
         )}
         {forgeKey && (
@@ -977,7 +1060,7 @@ export default function App() {
         {confirm === 'prestige' && (
           <Confirm
             title="Franchir le Portail ?"
-            confirmLabel={`Franchir (+${gain} 🗝️)`}
+            confirmLabel={<>Franchir (+{gain} <KeyRound size={15} strokeWidth={2.25} />)</>}
             onCancel={() => setConfirm(null)}
             onConfirm={() => {
               setConfirm(null)
@@ -985,7 +1068,7 @@ export default function App() {
               play('prestige')
             }}
           >
-            <div className="welcome-gain">+{gain} 🗝️</div>
+            <div className="welcome-gain">+{gain} <KeyRound size={30} strokeWidth={2} /></div>
             <div className="confirm-rows">
               <div>
                 <span className="muted">Revenu permanent des clés</span>
@@ -1034,6 +1117,7 @@ export default function App() {
             onCancel={() => setConfirm(null)}
             onConfirm={() => {
               setConfirm(null)
+              api.deleteSave(auth.token).catch(() => {})
               reset()
             }}
           >

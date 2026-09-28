@@ -24,7 +24,11 @@ async function request(path, { token, ...opts } = {}) {
   } catch {
     /* réponse vide (ex. 204) */
   }
-  if (!res.ok) throw new Error(body?.error ?? `Erreur serveur (${res.status})`)
+  if (!res.ok) {
+    const err = new Error(body?.error ?? `Erreur serveur (${res.status})`)
+    err.status = res.status
+    throw err
+  }
   return body
 }
 
@@ -37,4 +41,16 @@ export const api = {
     request('/leaderboard/submit', { method: 'POST', token, body: JSON.stringify(payload) }),
   leaderboard: (limit = 100) => request(`/leaderboard?limit=${limit}`),
   myRank: (token) => request('/leaderboard/me', { token }),
+  // sauvegarde synchronisée entre appareils (voir server/README.md) : getSave renvoie `null` (pas une
+  // erreur) quand le compte n'a encore aucune sauvegarde enregistrée
+  getSave: async (token) => {
+    try {
+      return await request('/save', { token })
+    } catch (err) {
+      if (err.status === 404) return null
+      throw err
+    }
+  },
+  putSave: (token, payload) => request('/save', { method: 'PUT', token, body: JSON.stringify({ payload }) }),
+  deleteSave: (token) => request('/save', { method: 'DELETE', token }),
 }
