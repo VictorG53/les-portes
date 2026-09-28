@@ -37,6 +37,9 @@ export const api = {
     request('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, pseudo }) }),
   login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   me: (token) => request('/auth/me', { token }),
+  // reprend la main sans mot de passe après une déconnexion forcée (voir App.jsx/Auth.jsx) : le jeton
+  // devenu invalide (autre appareil connecté entre-temps) sert lui-même de preuve d'identité
+  reclaim: (token) => request('/auth/reclaim', { method: 'POST', body: JSON.stringify({ token }) }),
   submitScore: (token, payload) =>
     request('/leaderboard/submit', { method: 'POST', token, body: JSON.stringify(payload) }),
   leaderboard: (limit = 100) => request(`/leaderboard?limit=${limit}`),

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { pool } from '../db.js'
-import { hashPassword, signToken, verifyPassword } from '../auth.js'
+import { hashPassword, signToken, verifyPassword, verifyToken } from '../auth.js'
 import { requireAuth } from '../middleware/requireAuth.js'
 
 export const authRouter = Router()
@@ -56,6 +56,22 @@ authRouter.post('/login', async (req, res) => {
     [user.id],
   )
   res.json({ token: signToken(user.id, updated[0].session_id), pseudo: user.pseudo })
+})
+
+// reprend la main sur un jeton devenu invalide parce qu'une connexion ailleurs a changé la session
+// (voir requireAuth) : la signature du jeton prouve déjà qui est son propriétaire, donc pas besoin de
+// redemander le mot de passe. Régénère la session (elle redevient l'unique session active) et signe un
+// nouveau jeton. Un jeton expiré (365 j) ou falsifié reste refusé : verifyToken vérifie déjà tout ça.
+authRouter.post('/reclaim', async (req, res) => {
+  const { token } = req.body ?? {}
+  const claims = typeof token === 'string' && verifyToken(token)
+  if (!claims) return res.status(401).json({ error: 'Jeton invalide ou expiré' })
+  const { rows } = await pool.query(
+    'update users set session_id = gen_random_uuid() where id = $1 returning session_id, pseudo',
+    [claims.userId],
+  )
+  if (!rows[0]) return res.status(404).json({ error: 'Utilisateur introuvable' })
+  res.json({ token: signToken(claims.userId, rows[0].session_id), pseudo: rows[0].pseudo })
 })
 
 authRouter.get('/me', requireAuth, async (req, res) => {
