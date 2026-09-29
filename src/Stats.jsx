@@ -56,7 +56,7 @@ function Bars({ rows, labelWidth = 92 }) {
           <div className="bar-track">
             <i className={r.fillClass ?? ''} style={{ width: `${(r.value / max) * 100}%`, background: r.color }} />
           </div>
-          <b>{int(r.value)}</b>
+          <b className={r.textClass ?? ''}>{int(r.value)}</b>
         </div>
       ))}
     </div>

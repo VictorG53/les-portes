@@ -57,7 +57,7 @@ export default function Door({
           <div key={o.id} className="tt-odds">
             <i className={rarityFill(o.id)} style={{ background: o.rarity.color }} />
             <span className={rarityClass(o.id)}>{o.rarity.label}</span>
-            <b>{pct(o.w)}%</b>
+            <b className={rarityClass(o.id)}>{pct(o.w)}%</b>
           </div>
         ))}
       <div className="tt-muted">
@@ -104,7 +104,7 @@ export default function Door({
             {top.map((o) => (
               <span key={o.id}>
                 <i className={rarityFill(o.id)} style={{ background: o.rarity.color }} />
-                <span className={rarityClass(o.id)}>{o.rarity.label}</span> <b>{pct(o.w)}%</b>
+                <span className={rarityClass(o.id)}>{o.rarity.label}</span> <b className={rarityClass(o.id)}>{pct(o.w)}%</b>
               </span>
             ))}
           </div>

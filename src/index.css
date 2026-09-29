@@ -542,9 +542,12 @@ main > .cols, main > section { animation: tab-in .2s ease-out; }
 .range { width: 160px; accent-color: var(--accent); cursor: pointer; }
 .settings-close { width: 100%; margin-top: 8px; }
 @media (max-width: 520px) {
-  .settings-row { flex-direction: column; align-items: stretch; gap: 8px; }
-  .settings-control { justify-content: flex-start; }
-  .range { width: 100%; }
+  /* sur mobile aussi, le réglage reste à droite de son libellé : on compacte les contrôles pour lui laisser la place */
+  .settings-row { gap: 10px; padding: 10px 12px; }
+  .settings-label { flex: 1 1 0; }
+  .settings .seg { width: auto; justify-content: flex-start; padding: 2px; }
+  .settings .seg button { padding: 5px 7px; font-size: .72rem; }
+  .settings .range { width: 96px; }
 }
 
 /* animations réduites : les animations décoratives (reflets, arc-en-ciel...) sont figées dans leur état final, pas relancées en boucle */
