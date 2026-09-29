@@ -22,16 +22,21 @@ export const ITEMS = [
   { id: 'potion', name: 'Potion de soin', emoji: '🧪', rarity: 'commun' },
   { id: 'dague', name: 'Dague rouillée', emoji: '🗡️', rarity: 'commun' },
   { id: 'bouclier', name: 'Bouclier en bois', emoji: '🛡️', rarity: 'commun' },
+  { id: 'torche', name: 'Torche éternelle', emoji: '🔥', rarity: 'commun' },
+  { id: 'pomme', name: 'Pomme dorée', emoji: '🍎', rarity: 'commun' },
   { id: 'parchemin', name: 'Parchemin ancien', emoji: '📜', rarity: 'commun' },
 
   { id: 'gobelin', name: 'Gobelin farceur', emoji: '👺', rarity: 'rare' },
   { id: 'arc', name: 'Arc elfique', emoji: '🏹', rarity: 'rare' },
   { id: 'grimoire', name: 'Grimoire poussiéreux', emoji: '📖', rarity: 'rare' },
+  { id: 'renard', name: 'Renard des bois', emoji: '🦊', rarity: 'rare' },
+  { id: 'cle', name: 'Clé ouvragée', emoji: '🗝️', rarity: 'rare' },
   { id: 'chouette', name: 'Chouette sage', emoji: '🦉', rarity: 'rare' },
 
   { id: 'mage', name: 'Mage des brumes', emoji: '🧙', rarity: 'epique' },
   { id: 'licorne', name: 'Licorne argentée', emoji: '🦄', rarity: 'epique' },
   { id: 'couronne', name: 'Couronne du roi déchu', emoji: '👑', rarity: 'epique' },
+  { id: 'sirene', name: 'Sirène chanteuse', emoji: '🧜', rarity: 'epique' },
   { id: 'orbe', name: 'Orbe arcanique', emoji: '🔮', rarity: 'epique' },
   {
     id: 'miroir', name: 'Miroir doré', emoji: '🪞', rarity: 'epique', weight: 0.5,
@@ -45,6 +50,7 @@ export const ITEMS = [
   { id: 'dragon', name: 'Dragon ancestral', emoji: '🐉', rarity: 'legendaire' },
   { id: 'phenix', name: 'Phénix immortel', emoji: '🐦‍🔥', rarity: 'legendaire' },
   { id: 'excalibur', name: 'Épée légendaire', emoji: '⚔️', rarity: 'legendaire' },
+  { id: 'golem', name: 'Golem de cristal', emoji: '🗿', rarity: 'legendaire' },
   {
     id: 'trefle', name: 'Trèfle à quatre feuilles', emoji: '🍀', rarity: 'legendaire', weight: 0.5,
     ability: { type: 'luck', value: 0.2 },
@@ -60,16 +66,15 @@ export const ITEMS = [
 
   { id: 'kraken', name: 'Kraken des abysses', emoji: '🦑', rarity: 'mythique' },
   { id: 'demon', name: 'Seigneur démon', emoji: '😈', rarity: 'mythique' },
-  {
-    id: 'chaudron', name: 'Chaudron du sorcier', emoji: '🫕', rarity: 'mythique', weight: 0.5,
-    ability: { type: 'rarity', rarity: 'epique', value: 1 },
-  },
+  { id: 'hydre', name: 'Hydre à sept têtes', emoji: '🐲', rarity: 'mythique' },
   {
     id: 'sablier', name: 'Sablier temporel', emoji: '⏳', rarity: 'mythique', weight: 0.5,
     ability: { type: 'global', value: 1 },
   },
 
   { id: 'porte', name: 'La Porte Originelle', emoji: '🚪', rarity: 'secret' },
+  { id: 'cle_secrete', name: 'La Clé du Secret', emoji: '🔑', rarity: 'secret' },
+  { id: 'livre_interdit', name: 'Le Livre interdit', emoji: '📕', rarity: 'secret' },
 
   { id: 'ange', name: 'Ange gardien', emoji: '👼', rarity: 'divin' },
   { id: 'etoile', name: 'Étoile déchue', emoji: '🌟', rarity: 'divin' },
@@ -104,12 +109,12 @@ export const ITEMS = [
 const RANK_POWER_STEP = 1.4
 const RANK_DROP_STEP = 0.65
 const POWER_ORDER = {
-  commun: ['champignon', 'potion', 'parchemin', 'dague', 'bouclier'],
-  rare: ['gobelin', 'chouette', 'arc', 'grimoire'],
-  epique: ['orbe', 'mage', 'couronne', 'licorne'],
-  legendaire: ['phenix', 'excalibur', 'dragon'],
-  mythique: ['demon', 'kraken'],
-  secret: ['porte'],
+  commun: ['champignon', 'potion', 'parchemin', 'torche', 'pomme', 'dague', 'bouclier'],
+  rare: ['gobelin', 'chouette', 'renard', 'arc', 'cle', 'grimoire'],
+  epique: ['orbe', 'mage', 'sirene', 'couronne', 'licorne'],
+  legendaire: ['phenix', 'golem', 'excalibur', 'dragon'],
+  mythique: ['hydre', 'demon', 'kraken'],
+  secret: ['livre_interdit', 'cle_secrete', 'porte'],
   divin: ['ange', 'trident', 'etoile'],
   cosmique: ['galaxie', 'planete'],
   rainbow: ['arcenciel', 'prisme'],
@@ -177,7 +182,7 @@ export const DOORS = [
     id: 'cristal',
     name: 'Porte en cristal',
     cost: 600000,
-    weights: [0, 0, 20, 50, 25, 3.5, 1.5, 0, 0, 0],
+    weights: [0, 0, 10, 45, 30, 10, 5, 0, 0, 0],
   },
   {
     id: 'neant',

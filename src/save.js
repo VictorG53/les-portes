@@ -9,7 +9,7 @@ import { gameStorage, prefs } from './storage'
 // La version ne change que pour une modification de STRUCTURE (champ renommé, déplacé, unité changée...) :
 // on ajoute alors une fonction à MIGRATIONS. Un simple nouveau champ n'en demande pas : normalize() complète
 // automatiquement les valeurs manquantes avec celles d'une partie neuve.
-export const SAVE_VERSION = 2
+export const SAVE_VERSION = 3
 
 // MIGRATIONS[n] transforme un état de version n en version n + 1
 const MIGRATIONS = [
@@ -59,6 +59,23 @@ const MIGRATIONS = [
   },
   // 1 -> 2 : arrivée du didacticiel. Les joueurs qui ont déjà une partie n'ont pas à le revoir.
   (state) => ({ ...state, tutorial: { step: 0, done: true, seen: {} } }),
+  // 2 -> 3 : le talisman « Chaudron du sorcier » a été supprimé, on le retire de la partie
+  (state) => {
+    const isChaudron = (k) => k === 'chaudron' || /^chaudron[#+*]/.test(k)
+    const strip = (obj = {}) => Object.fromEntries(Object.entries(obj).filter(([k]) => !isChaudron(k)))
+    const codex = { ...state.codex }
+    const codexShiny = { ...state.codexShiny }
+    delete codex.chaudron
+    delete codexShiny.chaudron
+    return {
+      ...state,
+      inventory: strip(state.inventory),
+      equipped: strip(state.equipped),
+      charms: strip(state.charms),
+      codex,
+      codexShiny,
+    }
+  },
 ]
 
 // complète les champs manquants avec ceux d'une partie neuve (y compris dans `stats`)
