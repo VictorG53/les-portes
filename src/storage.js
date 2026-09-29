@@ -1,6 +1,5 @@
-// Stockage. Deux usages distincts :
-// - `prefs` : préférences de l'appareil (onglet ouvert, filtres, réglages). Toujours locales, jamais synchronisées.
-// - `gameStorage` : la partie. C'est le seul point d'accès à remplacer pour passer à un serveur (voir setGameStorage).
+// Stockage local : uniquement `prefs`, les préférences de l'appareil (onglet ouvert, filtres, réglages, jeton
+// de connexion). Jamais synchronisées. La partie, elle, n'est plus stockée ici : elle est en ligne (voir App.jsx).
 const PREFIX = 'les-portes-'
 
 // stockage local, sans jamais lever d'exception (mode privé, quota, stockage bloqué...)
@@ -43,36 +42,25 @@ export const prefs = {
   remove: (name) => local.remove(PREFIX + name),
 }
 
-// --- la partie ---
-// Un adaptateur de partie expose : load() -> { version, state } | null ; save({ version, state }) ; clear().
-// Les trois méthodes peuvent être synchrones (stockage local) ou renvoyer une promesse (serveur, plus tard).
+// --- ancienne sauvegarde locale ---
+// La partie vit désormais uniquement sur le serveur. Cette copie, écrite par les anciennes versions, n'est lue
+// qu'une fois : à la première connexion d'un compte qui n'a encore rien en ligne (voir App.jsx), puis supprimée.
 const GAME_KEY = 'les-portes-save-v1'
 
-export const localGameStorage = {
+export const legacyLocalGame = {
   load() {
     const raw = local.get(GAME_KEY)
     if (raw === null) return null
     try {
       return JSON.parse(raw)
     } catch {
-      local.set(GAME_KEY + '-corrupt', raw) // on garde une copie de la sauvegarde illisible avant qu'elle soit écrasée
       return null
     }
   },
-  save(payload) {
-    local.set(GAME_KEY, JSON.stringify(payload))
-  },
   clear() {
     local.remove(GAME_KEY)
+    local.remove(GAME_KEY + '-corrupt')
+    local.remove(PREFIX + 'save-backup')
+    local.remove(PREFIX + 'save-backup-before-remote')
   },
-}
-
-let current = localGameStorage
-export const setGameStorage = (adapter) => {
-  current = adapter
-}
-export const gameStorage = {
-  load: () => current.load(),
-  save: (payload) => current.save(payload),
-  clear: () => current.clear(),
 }

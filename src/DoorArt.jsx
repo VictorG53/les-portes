@@ -85,7 +85,7 @@ const ART = {
     ),
   },
   rainbow: {
-    frame: '#e6e2f0', leaf: null, rainbow: true, room: '#ffffff',
+    frame: '#e6e2f0', leaf: null, anim: 'rainbow', room: '#ffffff',
     details: (
       <>
         <path d="M14 46V35C14 28 22 23 32 23s18 5 18 12v11z" fill="none" stroke="#fff" strokeWidth="2" opacity=".7" />
@@ -95,12 +95,35 @@ const ART = {
     ),
   },
   eternelle: {
-    frame: '#0a0a0a', leaf: null, mono: true, room: '#ffffff',
+    frame: '#0a0a0a', leaf: null, anim: 'mono', room: '#ffffff',
     details: (
       <>
         <path d="M18 52c0-8 8-11 14 0s14 8 14 0-8-11-14 0-14 8-14 0z" fill="none" stroke="#000" strokeWidth="6" strokeLinejoin="round" opacity=".55" />
         <path d="M18 52c0-8 8-11 14 0s14 8 14 0-8-11-14 0-14 8-14 0z" fill="none" stroke="#fff" strokeWidth="3" strokeLinejoin="round" />
         <path d="M32 18v7M32 79v-7M11 52h4M53 52h-4" stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity=".8" />
+      </>
+    ),
+  },
+  lave: {
+    frame: '#1c0a06', leaf: null, anim: 'lava', room: '#ffc46b',
+    details: (
+      <>
+        <path d="M32 10l-5 16 9 8-8 12 10 10-6 22" fill="none" stroke="#2a0800" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" opacity=".75" />
+        <path d="M32 10l-5 16 9 8-8 12 10 10-6 22" fill="none" stroke="#ffe08a" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
+        <path d="M14 70l9-4M50 30l-8 5M14 40l7 3" stroke="#2a0800" strokeWidth="2" strokeLinecap="round" opacity=".7" />
+        <circle cx="53" cy="56" r="2.5" fill="#2a0800" />
+      </>
+    ),
+  },
+  mutante: {
+    frame: '#10160a', leaf: null, anim: 'mutant', room: '#dcff4d',
+    details: (
+      <>
+        <circle cx="32" cy="50" r="15" fill="none" stroke="#0b0b0b" strokeWidth="3" opacity=".8" />
+        <circle cx="32" cy="50" r="4" fill="#0b0b0b" opacity=".85" />
+        <path d="M32 46V33M28.5 52l-11 6.5M35.5 52l11 6.5" stroke="#0b0b0b" strokeWidth="5" strokeLinecap="round" opacity=".8" />
+        <circle cx="20" cy="24" r="2" fill="#0b0b0b" opacity=".6" />
+        <circle cx="47" cy="72" r="3" fill="#0b0b0b" opacity=".6" />
       </>
     ),
   },
@@ -127,8 +150,8 @@ export default function DoorArt({ id, hidden = false, opening = false }) {
       <div className="door-hinge-top" />
       {/* battant */}
       <motion.div
-        className={`door-leaf ${art.rainbow ? 'rainbow-fill' : art.mono ? 'mono-fill' : ''}`}
-        style={{ clipPath: `path('${OPENING}')`, background: art.rainbow || art.mono ? undefined : art.leaf, transformOrigin: '6px 50%' }}
+        className={`door-leaf ${art.anim ? `${art.anim}-fill` : ''}`}
+        style={{ clipPath: `path('${OPENING}')`, background: art.anim ? undefined : art.leaf, transformOrigin: '6px 50%' }}
         animate={leafAnimation}
       >
         <svg viewBox="0 0 64 88" width="100%" height="100%">

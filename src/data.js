@@ -9,10 +9,14 @@ export const RARITIES = {
   secret: { label: 'Secret', color: '#3cffd0', income: 1500 },
   divin: { label: 'Divin', color: '#ffffff', income: 12000 },
   cosmique: { label: 'Cosmique', color: '#ff5cf4', income: 100000 },
-  // la couleur "rainbow" est animée en CSS (teinte qui tourne) ; le texte est un dégradé arc-en-ciel animé
-  rainbow: { label: 'Rainbow', color: 'var(--rainbow)', income: 1000000, rainbow: true },
-  // « éternel » est comme rainbow, mais en noir et blanc : dégradé animé en CSS (voir .mono-text, .mono-fill)
-  eternel: { label: 'Éternel', color: 'var(--mono)', income: 10000000, mono: true },
+  // les raretés à dégradé animé ont un champ `anim` : le nom du dégradé CSS (voir .rainbow-text, .rainbow-fill, etc. dans index.css)
+  rainbow: { label: 'Rainbow', color: 'var(--rainbow)', income: 1000000, anim: 'rainbow' },
+  // « éternel » est comme rainbow, mais en noir et blanc
+  eternel: { label: 'Éternel', color: 'var(--mono)', income: 10000000, anim: 'mono' },
+  // dégradé rouge et orange, comme de la lave en fusion
+  lava: { label: 'Lava', color: 'var(--lava)', income: 100000000, anim: 'lava' },
+  // dégradé noir, jaune et vert toxique
+  mutant: { label: 'Mutant', color: 'var(--mutant)', income: 1000000000, anim: 'mutant' },
 }
 
 export const RARITY_ORDER = Object.keys(RARITIES)
@@ -100,6 +104,20 @@ export const ITEMS = [
     id: 'oeil', name: 'Œil éternel', emoji: '🧿', rarity: 'eternel', weight: 0.5,
     ability: { type: 'global', value: 3 },
   },
+
+  { id: 'salamandre', name: 'Salamandre de braise', emoji: '🦎', rarity: 'lava' },
+  { id: 'volcan', name: 'Volcan rugissant', emoji: '🌋', rarity: 'lava' },
+  {
+    id: 'magma', name: 'Cœur de magma', emoji: '🫀', rarity: 'lava', weight: 0.5,
+    ability: { type: 'best', value: 4 },
+  },
+
+  { id: 'baril', name: 'Baril radioactif', emoji: '☢️', rarity: 'mutant' },
+  { id: 'mutant', name: 'Le Grand Mutant', emoji: '🧟', rarity: 'mutant' },
+  {
+    id: 'serum', name: 'Sérum mutagène', emoji: '🧬', rarity: 'mutant', weight: 0.5,
+    ability: { type: 'global', value: 5 },
+  },
 ]
 
 // --- hiérarchie à l'intérieur d'une rareté ---
@@ -119,6 +137,8 @@ const POWER_ORDER = {
   cosmique: ['galaxie', 'planete'],
   rainbow: ['arcenciel', 'prisme'],
   eternel: ['boucle', 'trounoir'],
+  lava: ['salamandre', 'volcan'],
+  mutant: ['baril', 'mutant'],
 }
 for (const [rarity, ids] of Object.entries(POWER_ORDER)) {
   const raw = ids.map((_, i) => RANK_POWER_STEP ** i)
@@ -152,67 +172,79 @@ export const rankInfo = (item) => {
 
 const ITEMS_BY_ID = Object.fromEntries(ITEMS.map((i) => [i.id, i]))
 
-// weights: commun, rare, épique, légendaire, mythique, secret, divin, cosmique, rainbow, éternel
+// weights: commun, rare, épique, légendaire, mythique, secret, divin, cosmique, rainbow, éternel, lava, mutant
 export const DOORS = [
   {
     id: 'bois',
     name: 'Porte en bois',
     cost: 10,
-    weights: [78, 18, 3.8, 0.2, 0, 0, 0, 0, 0, 0],
+    weights: [78, 18, 3.8, 0.2, 0, 0, 0, 0, 0, 0, 0, 0],
   },
   {
     id: 'fer',
     name: 'Porte en fer',
     cost: 150,
-    weights: [40, 42, 15, 2.8, 0.2, 0, 0, 0, 0, 0],
+    weights: [40, 42, 15, 2.8, 0.2, 0, 0, 0, 0, 0, 0, 0],
   },
   {
     id: 'or',
     name: 'Porte dorée',
     cost: 2500,
-    weights: [0, 40, 45, 13, 1.9, 0.1, 0, 0, 0, 0],
+    weights: [0, 40, 45, 13, 1.9, 0.1, 0, 0, 0, 0, 0, 0],
   },
   {
     id: 'runes',
     name: 'Porte runique',
     cost: 40000,
-    weights: [0, 0, 55, 35, 9, 1, 0, 0, 0, 0],
+    weights: [0, 0, 55, 35, 9, 1, 0, 0, 0, 0, 0, 0],
   },
   {
     id: 'cristal',
     name: 'Porte en cristal',
     cost: 600000,
-    weights: [0, 0, 10, 45, 30, 10, 5, 0, 0, 0],
+    weights: [0, 0, 10, 45, 30, 10, 5, 0, 0, 0, 0, 0],
   },
   {
     id: 'neant',
     name: 'Porte du Néant',
     cost: 12000000,
-    weights: [0, 0, 0, 20, 55, 15, 9, 1, 0, 0],
+    weights: [0, 0, 0, 20, 55, 15, 9, 1, 0, 0, 0, 0],
   },
   {
     id: 'rainbow',
     name: 'Porte Rainbow',
     cost: 250000000,
-    weights: [0, 0, 0, 0, 30, 40, 20, 8, 2, 0],
+    weights: [0, 0, 0, 0, 30, 40, 20, 8, 2, 0, 0, 0],
   },
   {
     id: 'eternelle',
     name: 'Porte Éternelle',
     cost: 5000000000,
-    weights: [0, 0, 0, 0, 0, 40, 35, 20, 4.5, 0.5],
+    weights: [0, 0, 0, 0, 0, 40, 35, 20, 4.5, 0.5, 0, 0],
+  },
+  {
+    id: 'lave',
+    name: 'Porte de Lave',
+    cost: 100000000000,
+    weights: [0, 0, 0, 0, 0, 0, 30, 35, 22, 10, 3, 0],
+  },
+  {
+    id: 'mutante',
+    name: 'Porte Mutante',
+    cost: 2000000000000,
+    weights: [0, 0, 0, 0, 0, 0, 0, 25, 40, 22, 11, 2],
   },
 ]
 
 // Les portes chères s'adaptent à ta puissance permanente (Fortune, clés, succès) : leur prix est multiplié par
 // puissance ^ exposant. Les premières portes n'en dépendent pas (le début va de plus en plus vite avec les prestiges),
 // la dernière suit ta puissance de près, si bien qu'elle reste longue à atteindre.
-export const DOOR_PRICE_EXP = { bois: 0, fer: 0, or: 0, runes: 0.3, cristal: 0.5, neant: 0.65, rainbow: 0.8, eternelle: 0.95 }
+export const DOOR_PRICE_EXP = { bois: 0, fer: 0, or: 0, runes: 0.3, cristal: 0.5, neant: 0.65, rainbow: 0.8, eternelle: 0.95, lave: 1, mutante: 1 }
 
 // classe CSS à ajouter au texte d'une rareté (dégradé arc-en-ciel animé pour Rainbow)
-export const rarityClass = (rarity) => (RARITIES[rarity]?.rainbow ? 'rainbow-text' : RARITIES[rarity]?.mono ? 'mono-text' : '')
+export const rarityClass = (rarity) => (RARITIES[rarity]?.anim ? `${RARITIES[rarity].anim}-text` : '')
 // classe CSS d'un aplat plein (barre de probabilités, pastille) pour les raretés animées
-export const rarityFill = (rarity) => (RARITIES[rarity]?.rainbow ? 'rainbow-fill' : RARITIES[rarity]?.mono ? 'mono-fill' : '')
+export const rarityFill = (rarity) => (RARITIES[rarity]?.anim ? `${RARITIES[rarity].anim}-fill` : '')
 
 const sellValue = (item) => Math.round(RARITIES[item.rarity].income * item.power * 40)
 

@@ -20,7 +20,7 @@ tout l'accès au stockage passe par `src/storage.js` et `src/save.js`, pour qu'o
 
 - **Portes** : chaque porte a ses probabilités de rareté. Les lots (×1 à ×250) ouvrent plusieurs portes d'un coup ;
   les gros lots se débloquent avec le prestige.
-- **Objets** : 10 raretés, de Commun à Éternel. Dans une rareté, les objets ont un rang (plus fort mais plus rare).
+- **Objets** : 12 raretés, de Commun à Mutant. Dans une rareté, les objets ont un rang (plus fort mais plus rare).
   Une variante **shiny** rapporte ×1,5.
 - **Sacs** : le sac d'or (seuls ces objets rapportent) et les talismans (objets à capacité : ils ne rapportent pas
   d'or, mais leur effet s'applique).
@@ -45,7 +45,7 @@ tout l'accès au stockage passe par `src/storage.js` et `src/save.js`, pour qu'o
 | `src/Stats.jsx` | Page de statistiques (compteurs, records, historique des prestiges) |
 | `src/revealUtils.js` | Regroupement des résultats des gros lots |
 | `src/sound.js` | Sons générés avec la Web Audio API (aucun fichier audio) |
-| `src/storage.js` | Seul point d'accès au stockage : `prefs` (préférences de l'appareil) et `gameStorage` (la partie, adaptateur remplaçable par un serveur avec `setGameStorage`) |
+| `src/storage.js` | Seul point d'accès au stockage : `prefs` (préférences de l'appareil, jeton de connexion) ; la partie n'y est plus stockée |
 | `src/save.js` | Sauvegarde versionnée (`{ version, savedAt, state }`), migrations des anciennes sauvegardes, sauvegarde de secours |
 | `src/settings.js`, `src/Settings.jsx` | Réglages de l'appareil (volume, animations, format des nombres, notifications) |
 | `src/tutorial.js`, `src/Tutorial.jsx` | Didacticiel : guide de démarrage en 6 étapes, puis conseils contextuels affichés une seule fois |
@@ -76,8 +76,9 @@ Il est conseillé de le relancer après chaque changement de contenu ou de valeu
 - Une sauvegarde est `{ version, savedAt, state }`. `SAVE_VERSION` (dans `src/save.js`) n'augmente que pour un changement de **structure**
   (champ renommé ou déplacé, unité modifiée) : on ajoute alors une fonction à `MIGRATIONS`.
 - Un simple **nouveau champ** ne demande pas de migration : `normalize()` le complète avec la valeur d'une partie neuve.
-- Une sauvegarde plus récente que le jeu, ou illisible, n'est jamais écrasée sans copie : elle est conservée sous
-  `les-portes-save-backup` / `les-portes-save-v1-corrupt`.
+- La partie vit **uniquement en ligne** : elle est chargée depuis le compte au démarrage (rien ne se joue sans connexion au serveur)
+  et envoyée à chaque changement (ouverture de porte, réserve, sac, talismans, améliorations, prestige), une requête à la fois.
+  L'ancienne copie locale n'est lue qu'une fois, pour un compte qui n'a encore rien en ligne, puis supprimée.
 - Les réglages et les préférences (onglet, filtres) sont **locaux à l'appareil** et ne font pas partie de la sauvegarde.
 
 ## Didacticiel
@@ -111,6 +112,6 @@ hébergeur statique :
 Pour tester le résultat en local : `npm run build && npm run preview`.
 
 **À savoir**
-- La sauvegarde est dans le navigateur, **propre à chaque adresse** : une partie commencée en local (`localhost`) n'apparaît pas sur le site en ligne, et vider les données du site efface la partie.
+- La partie est sauvegardée sur le serveur, liée au compte : elle se retrouve sur tous les appareils, en local comme en ligne (tant que `VITE_API_URL` pointe vers la même API).
 - Pour le partage sur les réseaux, ajouter une balise `og:image` (URL absolue) dans `index.html` une fois l'adresse définitive connue.
 - Le dossier `dist/` n'est pas versionné (`.gitignore`).

@@ -118,7 +118,7 @@ export default function Settings({ settings, onChange, onClose, onResetGame, onR
 
         <div className="settings-group">
           <div className="settings-title">Compte</div>
-          <Row title={auth.pseudo} hint="Ta progression est synchronisée avec le compte toutes les 2 minutes.">
+          <Row title={auth.pseudo} hint="Ta partie est sauvegardée en ligne à chaque action.">
             <button className="btn small ghost" onClick={onLogout}>
               Se déconnecter
             </button>

@@ -439,7 +439,11 @@ main { max-width: 1320px; padding: 24px 24px 48px; gap: 32px; }
 .confirm-rows > .progress { display: block; padding: 0; height: 6px; background: var(--surface-2); border-radius: 99px; }
 .confirm-rows > div:not(.progress) { flex-wrap: wrap; row-gap: 2px; align-items: baseline; }
 .confirm-rows b { text-align: right; margin-left: auto; }
-.confirm-actions .btn { white-space: nowrap; }
+.confirm-actions { flex-wrap: wrap; }
+/* libellés longs (« Utiliser un autre compte », « Franchir (+3 🔑) »...) : ils passent à la ligne plutôt que de déborder */
+.confirm-actions .btn { min-width: min(100%, 130px); white-space: normal; line-height: 1.2; overflow-wrap: anywhere; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.reveal .btn { line-height: 1.2; }
+.settings-control .btn { white-space: nowrap; }
 .mini-count { top: auto; bottom: 3px; right: auto; left: 5px; }
 .ach-summary { display: flex; align-items: center; gap: 14px; margin: -4px 0 18px; }
 .ach-summary .progress { flex: 1; max-width: 420px; }
@@ -609,6 +613,80 @@ main > .cols, main > section { animation: tab-in .2s ease-out; }
 /* réglage « animations réduites » : dégradés figés */
 :root[data-motion='reduce'] .mono-text, :root[data-motion='reduce'] .mono-fill { background-position: 0 0; }
 
+/* ---------- rareté Lava : dégradé rouge et orange animé ---------- */
+:root {
+  --lava: #ff7a1a; /* couleur de repli */
+  --lava-grad: linear-gradient(90deg, #ff2d0a, #ff7a00, #ffc21a, #ff7a00, #ff2d0a);
+  --lava-soft: linear-gradient(90deg, rgba(255, 45, 10, .26), rgba(255, 122, 0, .22), rgba(255, 194, 26, .2), rgba(255, 122, 0, .22), rgba(255, 45, 10, .26));
+}
+.lava-text {
+  background: var(--lava-grad);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  animation: rb-slide 2.8s linear infinite;
+}
+.lava-fill { background: var(--lava-grad) !important; background-size: 200% 100%; animation: rb-slide 2.8s linear infinite; }
+.card[style*='--lava'],
+.slot[style*='--lava'],
+.mini[style*='--lava'],
+.reveal[style*='--lava'] {
+  border-color: transparent;
+  background: var(--lava-soft) padding-box, linear-gradient(var(--surface), var(--surface)) padding-box, var(--lava-grad) border-box;
+  background-size: 200% 100%, 100% 100%, 200% 100%;
+  animation: rb-slide-box 2.8s linear infinite;
+}
+.slot[style*='--lava']:hover,
+.card.equippable[style*='--lava']:hover { filter: brightness(1.15); }
+[style*='--lava'] .badge-emoji,
+.reveal[style*='--lava'] .reveal-badge {
+  background: var(--lava-soft), var(--surface-2);
+  background-size: 200% 100%, 100% 100%;
+  animation: rb-slide-tint 2.8s linear infinite;
+}
+.card.locked[style*='--lava'] { border-color: var(--line); background: var(--surface); animation: none; }
+.card.locked[style*='--lava'] .badge-emoji { background: var(--surface-2); animation: none; }
+:root[data-motion='reduce'] .lava-text, :root[data-motion='reduce'] .lava-fill { background-position: 0 0; }
+
+/* ---------- rareté Mutant : dégradé noir, jaune et vert animé ---------- */
+:root {
+  --mutant: #9fe82a; /* couleur de repli */
+  --mutant-grad: linear-gradient(90deg, #4a4a4a, #f2e30c, #3ee63e, #f2e30c, #4a4a4a);
+  --mutant-soft: linear-gradient(90deg, rgba(0, 0, 0, .4), rgba(242, 227, 12, .2), rgba(62, 230, 62, .22), rgba(242, 227, 12, .2), rgba(0, 0, 0, .4));
+}
+.mutant-text {
+  background: var(--mutant-grad);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  animation: rb-slide 3.2s linear infinite;
+}
+.mutant-fill { background: var(--mutant-grad) !important; background-size: 200% 100%; animation: rb-slide 3.2s linear infinite; }
+.card[style*='--mutant'],
+.slot[style*='--mutant'],
+.mini[style*='--mutant'],
+.reveal[style*='--mutant'] {
+  border-color: transparent;
+  background: var(--mutant-soft) padding-box, linear-gradient(var(--surface), var(--surface)) padding-box, var(--mutant-grad) border-box;
+  background-size: 200% 100%, 100% 100%, 200% 100%;
+  animation: rb-slide-box 3.2s linear infinite;
+}
+.slot[style*='--mutant']:hover,
+.card.equippable[style*='--mutant']:hover { filter: brightness(1.15); }
+[style*='--mutant'] .badge-emoji,
+.reveal[style*='--mutant'] .reveal-badge {
+  background: var(--mutant-soft), var(--surface-2);
+  background-size: 200% 100%, 100% 100%;
+  animation: rb-slide-tint 3.2s linear infinite;
+}
+.card.locked[style*='--mutant'] { border-color: var(--line); background: var(--surface); animation: none; }
+.card.locked[style*='--mutant'] .badge-emoji { background: var(--surface-2); animation: none; }
+:root[data-motion='reduce'] .mutant-text, :root[data-motion='reduce'] .mutant-fill { background-position: 0 0; }
+
 /* résultats d'un lot : objets et talismans en deux sections, dans une même zone défilante */
 .multi-body { width: 100%; max-height: min(50vh, 420px); overflow-y: auto; padding: 6px 4px 2px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; display: flex; flex-direction: column; gap: 14px; }
 .multi-body .multi-grid { max-height: none; overflow: visible; padding: 8px 0 2px; margin: 0; }
@@ -653,3 +731,11 @@ html, body, * { scrollbar-width: none !important; -ms-overflow-style: none; }
 .board-head { font-size: .68rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .board-row.me { background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 8px; font-weight: 700; }
 .board-mine { margin: -6px 0 14px; }
+
+/* icônes « shiny » et « talisman » : couleur de la rareté de l'objet (--c, posée sur la carte, la tuile ou la fenêtre) */
+.shiny-dot,
+.ab-dot,
+.ability svg,
+.stars-row b svg,
+.tt-title > svg,
+.pill.eq svg { color: var(--c); }

@@ -617,15 +617,10 @@ function applySell(s) {
     : s
 }
 
-// Hook principal du jeu. Le stockage est fourni par l'appelant :
-//   load()  -> état de départ ;  save(state) : enregistre la partie ;  clear() : efface la partie.
-// (voir src/save.js et src/storage.js : c'est là qu'on branchera un serveur)
-export function useGame({ load, save, clear }) {
-  const [state, setState] = useState(load)
-  const io = useRef({ save, clear }) // les fonctions de stockage peuvent changer entre deux rendus
-  useEffect(() => {
-    io.current = { save, clear }
-  })
+// Hook principal du jeu. Il ne persiste rien : la partie vit sur le serveur (voir App.jsx). Elle démarre
+// vide, puis loadState() la remplace par celle du compte une fois récupérée.
+export function useGame() {
+  const [state, setState] = useState(createState)
   const stateRef = useRef(state)
   const lastTick = useRef(0)
   const lastActivity = useRef(null) // dernière interaction (clic, touche, molette) : voir applyIdleTick, initialisée ci-dessous
@@ -692,20 +687,6 @@ export function useGame({ load, save, clear }) {
     return () => clearInterval(id)
   }, [])
 
-  // sauvegarde (avec l'heure, pour calculer l'absence à la reprise)
-  useEffect(() => {
-    const persist = () => io.current.save({ ...stateRef.current, lastSeen: Date.now() })
-    const id = setInterval(persist, 2000)
-    const onHide = () => document.visibilityState === 'hidden' && persist()
-    document.addEventListener('visibilitychange', onHide)
-    window.addEventListener('pagehide', persist)
-    return () => {
-      clearInterval(id)
-      document.removeEventListener('visibilitychange', onHide)
-      window.removeEventListener('pagehide', persist)
-    }
-  }, [])
-
   // ouvre `count` portes d'un coup : retourne les objets obtenus, ou null si pas assez d'or
   const openDoor = useCallback((doorId, count = 1) => {
     const plan = planOpen(stateRef.current, doorId, count)
@@ -757,12 +738,10 @@ export function useGame({ load, save, clear }) {
   const buyUpgrade = useCallback((id) => setState((s) => applyUpgrade(s, id)), [])
 
   const reset = useCallback(() => {
-    io.current.clear()
     setState(createState())
   }, [])
 
-  // remplace toute la partie par un état déjà prêt (ex. sauvegarde récupérée d'un autre appareil, voir
-  // App.jsx). Persiste immédiatement : ne dépend pas de la sauvegarde périodique (toutes les 2 s).
+  // remplace toute la partie par un état déjà prêt (sauvegarde récupérée du serveur, voir App.jsx).
   // Calcule aussi l'absence par rapport à `lastSeen` de cet état (l'horloge d'absence de l'ancienne
   // partie ne dit rien sur celle qu'on vient d'adopter) : sans ça, le retour d'un autre appareil ne
   // montre jamais l'écran « Bon retour ».
@@ -772,7 +751,6 @@ export function useGame({ load, save, clear }) {
     lastTick.current = now
     const gain = gap > AWAY_SECONDS ? offlineGain(next, gap) : 0
     const applied = gain > 0 ? applyOffline(next, gap) : next
-    io.current.save(applied)
     setState(applied)
     if (gain > 0 && gap >= MIN_REPORT_SECONDS) {
       setWelcome({ seconds: gap, gain, rate: offlineRate(applied), capHours: offlineCapHours(applied) })

@@ -1,6 +1,5 @@
 import { DOORS, parseKey } from './data'
 import { bestEquipment, computeStats, createState, doorPrice, isCharm, roundGold } from './game'
-import { gameStorage, prefs } from './storage'
 
 // Sauvegarde de la partie : format versionné, prêt à être synchronisé avec un serveur.
 //
@@ -106,19 +105,3 @@ export function migrate(payload) {
   for (; version < SAVE_VERSION; version++) state = MIGRATIONS[version](state)
   return normalize(state)
 }
-
-// charge la partie (ou une partie neuve si rien n'est enregistré ou si la sauvegarde est inutilisable)
-export function loadGame() {
-  let payload = null
-  try {
-    payload = gameStorage.load()
-    if (payload) return migrate(payload)
-  } catch {
-    // sauvegarde d'une version inconnue ou inutilisable : on garde une copie avant que la nouvelle partie ne l'écrase
-    if (payload) prefs.set('save-backup', payload)
-  }
-  return createState()
-}
-
-export const saveGame = (state) => gameStorage.save({ version: SAVE_VERSION, savedAt: Date.now(), state })
-export const clearGame = () => gameStorage.clear()

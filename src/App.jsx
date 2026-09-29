@@ -49,6 +49,7 @@ import {
   startSlots,
   upLevel,
   useGame,
+  createState,
 } from './game'
 import Door from './Door'
 import Reveal from './Reveal'
@@ -67,18 +68,17 @@ import Tip, { ItemTip, Text } from './Tip'
 import { play } from './sound'
 import Settings from './Settings'
 import { applySettings, loadSettings, saveSettings } from './settingsStore'
-import { clearGame, loadGame, saveGame, migrate, SAVE_VERSION } from './save'
-import { prefs } from './storage'
+import { migrate, SAVE_VERSION } from './save'
+import { legacyLocalGame } from './storage'
 import Auth from './Auth'
 import Leaderboard from './Leaderboard'
-import SaveConflict from './SaveConflict'
 import { loadAuth, loadRevokedAuth, saveAuth, saveRevokedAuth } from './authStore'
 import { api } from './api'
 
 
 export default function App() {
   const { state: liveState, loadState, welcome, closeWelcome, toasts, dismissToast, openDoor, equip, unequip, fuse, setAutoFuse, autoEquip, buySlot, buyCharmSlot, enhance, sellDuplicates, prestige, setTutorial, buyUpgrade, reset } =
-    useGame({ load: loadGame, save: saveGame, clear: clearGame })
+    useGame()
   const [reveal, setReveal] = useState(null) // liste de { item, isNew }
   // Photo de la partie prise juste avant l'ouverture d'une porte : l'affichage (objets, sacs, collection, bonus...)
   // reste figé dessus tant que l'écran de résultat est ouvert, pour ne pas dévoiler le tirage en arrière-plan.
@@ -110,10 +110,16 @@ export default function App() {
   // compte joueur : { token, pseudo } | null. Obligatoire pour jouer (voir le garde-fou en fin de fonction) ;
   // sert aussi au classement et à la sauvegarde synchronisée entre appareils.
   const [auth, setAuth] = useState(loadAuth)
-  // identifiants acceptés, réconciliation de la sauvegarde avec le serveur en cours (voir handleAuthSuccess)
+  // compte dont on récupère la partie en ligne (connexion ou reprise de session) ; erreur réseau éventuelle
   const [pendingAuth, setPendingAuth] = useState(null)
-  // { auth, local, remote } quand l'appareil et le compte ont chacun une progression différente
-  const [saveConflict, setSaveConflict] = useState(null)
+  const [syncError, setSyncError] = useState(null)
+  // true une fois la partie du compte chargée : rien ne se joue ni ne s'envoie avant (sinon une partie vide
+  // écraserait celle du serveur)
+  const [synced, setSynced] = useState(false)
+  const syncedRef = useRef(false)
+  useEffect(() => {
+    syncedRef.current = synced
+  }, [synced])
   // dernier compte de cet appareil dont la session a été invalidée (voir onSyncError) : permet de
   // reprendre la main sans ressaisir le mot de passe (voir Auth.jsx, handleReclaim)
   const [revokedAuth, setRevokedAuth] = useState(loadRevokedAuth)
@@ -138,9 +144,15 @@ export default function App() {
 
   // state/income changent à chaque tick, donc on les lit via une ref (jamais périmée) plutôt que dans les
   // dépendances des effets ci-dessous.
-  const latest = useRef({ state, income })
+  // (déclaré avant les effets d'envoi : ils lisent le compte courant via cette ref)
+  const authRef = useRef(auth)
   useEffect(() => {
-    latest.current = { state, income }
+    authRef.current = auth
+  }, [auth])
+  // `live` (jamais la photo figée pendant un résultat de porte) est ce qui part au serveur.
+  const latest = useRef({ live: liveState })
+  useEffect(() => {
+    latest.current = { live: liveState }
   })
 
   // une connexion depuis un autre appareil invalide ce jeton côté serveur (une seule session à la fois,
@@ -150,51 +162,69 @@ export default function App() {
     if (err?.status !== 401) return
     setRevokedAuth(a)
     setAuth(null)
+    setSynced(false)
   }, [])
 
-  // sauvegarde côté serveur : événementielle (voir l'effet plus bas, sur les changements de réserve/sac/
-  // talismans/améliorations), pas sur un minuteur — l'or lui-même se recalcule à la volée grâce à
-  // `lastSeen` (voir buildSavePayload), il n'a donc pas besoin d'un envoi régulier pour rester à jour.
-  const saveNow = useCallback((a, s) => {
-    api.putSave(a.token, buildSavePayload(s)).catch(onAuthedCallError(a))
-  }, [onAuthedCallError])
-
-  // classement : compte les clés de prestige (voir Leaderboard.jsx) — ça ne change qu'au prestige, donc
-  // événementiel comme la sauvegarde ci-dessous plutôt que sur un minuteur.
-  const submitScore = useCallback((a, s, inc) => {
+  // classement : compte les clés de prestige (voir Leaderboard.jsx) — événementiel, avec un léger anti-rebond
+  const submitScore = useCallback((a, s) => {
     const sum = summarize(s)
     api
-      .submitScore(a.token, { totalGoldEarned: String(sum.gold), totalKeys: sum.keys, prestiges: sum.prestiges, income: inc })
+      .submitScore(a.token, { totalGoldEarned: String(sum.gold), totalKeys: sum.keys, prestiges: sum.prestiges, income: computeStats(s).income })
       .catch(onAuthedCallError(a))
   }, [onAuthedCallError])
 
-  // sauvegarde + classement événementiels : dès qu'un changement structurel (réserve, sac, talismans,
-  // améliorations, prestige...) survient — pas à chaque tick d'or, ignoré ici puisqu'absent des
-  // dépendances. Léger anti-rebond pour éviter une rafale de requêtes (ouverture ×10, fusion en cascade...).
+  // sauvegarde en ligne : envoyée aussitôt à chaque changement (ouverture de porte, réserve, sac, talismans,
+  // améliorations, prestige...), pas à chaque tick d'or (l'or se recalcule à la volée grâce à `lastSeen`).
+  // Une seule requête à la fois : les changements survenus pendant l'envoi partent ensuite d'un bloc avec l'état
+  // le plus récent, donc jamais dans le désordre. En cas d'échec réseau, on réessaie au bout de 5 s.
+  const saver = useRef({ busy: false, dirty: false, retry: false })
+  const flushSave = useCallback(() => {
+    const q = saver.current
+    const a = authRef.current
+    if (!a || !syncedRef.current) return
+    if (q.busy) {
+      q.dirty = true
+      return
+    }
+    q.busy = true
+    api
+      .putSave(a.token, buildSavePayload(latest.current.live))
+      .catch((err) => {
+        if (err?.status === 401) onAuthedCallError(a)(err)
+        else q.retry = true
+      })
+      .finally(() => {
+        q.busy = false
+        if (q.dirty || q.retry) {
+          const delay = q.retry ? 5000 : 0
+          q.dirty = false
+          q.retry = false
+          setTimeout(flushSave, delay)
+        }
+      })
+  }, [onAuthedCallError])
+
+  const saveDeps = [liveState.inventory, liveState.equipped, liveState.charms, liveState.slots, liveState.charmSlots, liveState.upgrades, liveState.prestiges, liveState.totalKeys, liveState.opened, liveState.autoFuse, liveState.achievements, liveState.tutorial]
   useEffect(() => {
-    if (!auth) return
-    const id = setTimeout(() => {
-      const { state: s, income: inc } = latest.current
-      saveNow(auth, s)
-      submitScore(auth, s, inc)
-    }, 2500)
-    return () => clearTimeout(id)
+    if (auth && synced) flushSave()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth, saveNow, submitScore, liveState.inventory, liveState.equipped, liveState.charms, liveState.slots, liveState.charmSlots, liveState.upgrades, liveState.prestiges, liveState.totalKeys])
+  }, [auth, synced, flushSave, ...saveDeps])
+
+  useEffect(() => {
+    if (!auth || !synced) return
+    const id = setTimeout(() => submitScore(auth, latest.current.live), 2500)
+    return () => clearTimeout(id)
+  }, [auth, synced, submitScore, liveState.inventory, liveState.equipped, liveState.charms, liveState.upgrades, liveState.prestiges, liveState.totalKeys])
 
   // fermeture/masquage d'onglet : tente une dernière sauvegarde fiable via sendBeacon (part même si la
   // page se ferme tout de suite après, contrairement à un fetch classique). auth/state changent souvent :
   // on les lit via les refs déjà tenues à jour (latest, plus authRef ci-dessous) pour ne pas réabonner
   // l'effet à chaque tick.
-  const authRef = useRef(auth)
-  useEffect(() => {
-    authRef.current = auth
-  }, [auth])
   useEffect(() => {
     const beacon = () => {
       const a = authRef.current
-      if (!a) return
-      api.beaconSave(a.token, buildSavePayload(latest.current.state))
+      if (!a || !syncedRef.current) return
+      api.beaconSave(a.token, buildSavePayload(latest.current.live))
     }
     const onHide = () => document.visibilityState === 'hidden' && beacon()
     document.addEventListener('visibilitychange', onHide)
@@ -205,57 +235,68 @@ export default function App() {
     }
   }, [])
 
-  const finishAuth = (a) => {
-    setAuth(a)
-    setPendingAuth(null)
-    setSaveConflict(null)
-    setRevokedAuth(null)
-  }
-
-  // écrase la partie locale avec celle du serveur (filet de sécurité avant, au cas où) et bascule le jeu
-  // dessus immédiatement — pas de rechargement de page : ça déclencherait la sauvegarde automatique de
-  // useGame sur pagehide, avec l'ancien état encore en mémoire, qui écraserait la sauvegarde qu'on vient
-  // d'écrire (vécu en test). loadState() met à jour l'état ET persiste dans le même geste.
-  const adoptRemote = (payload, a) => {
-    prefs.set('save-backup-before-remote', buildSavePayload(liveState))
-    loadState(migrate(payload))
-    finishAuth(a)
-  }
-
-  // connexion/inscription réussie : réconcilie la sauvegarde locale avec celle du compte avant de laisser jouer
-  const handleAuthSuccess = async (a) => {
+  // récupère la partie du compte avant de laisser jouer : la version en ligne fait foi, l'appareil ne garde rien.
+  // Un compte sans sauvegarde en ligne repart de zéro (ou de l'ancienne copie locale de cet appareil, une fois).
+  const syncAccount = async (a) => {
     setPendingAuth(a)
-    let remote = null
+    setSyncError(null)
+    let remote
     try {
       remote = await api.getSave(a.token)
-    } catch {
-      // API indisponible : ne jamais bloquer le joueur, il continuera avec sa partie locale
-    }
-    if (!remote) {
-      await api.putSave(a.token, buildSavePayload(liveState)).catch(() => {})
-      finishAuth(a)
+    } catch (err) {
+      if (err.status === 401) {
+        setRevokedAuth(a)
+        setAuth(null)
+        setPendingAuth(null)
+        return
+      }
+      setSyncError(err.message) // pas de partie locale de repli : on propose de réessayer
       return
     }
-    if (liveState.opened === 0) {
-      adoptRemote(remote.payload, a)
-      return
+    let next
+    if (remote) {
+      next = migrate(remote.payload)
+    } else {
+      try {
+        const legacy = legacyLocalGame.load()
+        next = legacy ? migrate(legacy) : createState()
+      } catch {
+        next = createState()
+      }
+      try {
+        await api.putSave(a.token, buildSavePayload(next))
+      } catch (err) {
+        if (err.status !== 401) {
+          setSyncError(err.message)
+          return
+        }
+      }
     }
-    const localSum = summarize(liveState)
-    const remoteSum = summarize(migrate(remote.payload))
-    const same = localSum.gold === remoteSum.gold && localSum.keys === remoteSum.keys && localSum.prestiges === remoteSum.prestiges && localSum.opened === remoteSum.opened
-    if (same) {
-      finishAuth(a)
-      return
-    }
-    setSaveConflict({ auth: a, local: localSum, remote: remoteSum, remotePayload: remote.payload })
+    legacyLocalGame.clear()
+    loadState(next)
+    setAuth(a)
+    setPendingAuth(null)
+    setRevokedAuth(null)
+    setSynced(true)
+  }
+
+  // session déjà ouverte sur cet appareil : on récupère la partie en ligne au chargement de la page
+  useEffect(() => {
+    if (auth) syncAccount(auth)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const logout = () => {
+    setSynced(false)
+    setAuth(null)
   }
 
   // reprend la main sans mot de passe (voir Auth.jsx) : le jeton devenu invalide sert de preuve
   // d'identité ; en cas d'échec (jeton trop vieux, réseau...) on efface le raccourci et retombe sur le
-  // formulaire classique. Un succès relance la réconciliation normale (l'autre appareil a pu progresser).
+  // formulaire classique.
   const handleReclaim = async () => {
     const a = await api.reclaim(revokedAuth.token)
-    await handleAuthSuccess({ token: a.token, pseudo: a.pseudo })
+    await syncAccount({ token: a.token, pseudo: a.pseudo })
   }
 
   const used = equippedCount(state.equipped)
@@ -400,31 +441,47 @@ export default function App() {
     }, 1100)
   }
 
-  // un compte est nécessaire pour jouer (sauvegarde synchronisée) : rien d'autre ne se monte tant qu'on
-  // n'est pas connecté, ou que la réconciliation de la sauvegarde (ci-dessus) n'est pas terminée
-  if (!auth) {
+  // un compte est nécessaire pour jouer (partie en ligne) : rien d'autre ne se monte tant qu'on n'est pas
+  // connecté et que la partie du compte n'est pas chargée
+  if (syncError && pendingAuth) {
+    return (
+      <div className="app">
+        <div className="overlay">
+          <div className="reveal auth" role="dialog" aria-modal="true" aria-label="Connexion au serveur" style={{ '--c': 'var(--accent)' }}>
+            <div className="reveal-title">Serveur injoignable</div>
+            <p className="muted">
+              {syncError} Ta partie est sauvegardée en ligne : il faut pouvoir la récupérer pour jouer.
+            </p>
+            <div className="confirm-actions">
+              <button
+                className="btn ghost"
+                onClick={() => {
+                  setSyncError(null)
+                  setPendingAuth(null)
+                  setAuth(null)
+                }}
+              >
+                Changer de compte
+              </button>
+              <button className="btn" autoFocus onClick={() => syncAccount(pendingAuth)}>
+                Réessayer
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  if (!auth || !synced) {
     return (
       <div className="app">
         <Auth
           mandatory
-          checking={!!pendingAuth && !saveConflict}
-          onAuth={handleAuthSuccess}
+          checking={!!pendingAuth || !!auth}
+          onAuth={syncAccount}
           revoked={revokedAuth}
           onReclaim={handleReclaim}
         />
-        <AnimatePresence>
-          {saveConflict && (
-            <SaveConflict
-              local={saveConflict.local}
-              remote={saveConflict.remote}
-              onKeepLocal={() => {
-                api.putSave(saveConflict.auth.token, buildSavePayload(liveState)).catch(() => {})
-                finishAuth(saveConflict.auth)
-              }}
-              onKeepRemote={() => adoptRemote(saveConflict.remotePayload, saveConflict.auth)}
-            />
-          )}
-        </AnimatePresence>
       </div>
     )
   }
@@ -1071,7 +1128,7 @@ export default function App() {
         )}
 
         {tab === 'leaderboard' && (
-          <Leaderboard auth={auth} onLogout={() => setAuth(null)} />
+          <Leaderboard auth={auth} onLogout={logout} />
         )}
       </main>
 
@@ -1112,7 +1169,7 @@ export default function App() {
               setTutorial({ step: 0, done: false, seen: {} })
             }}
             auth={auth}
-            onLogout={() => setAuth(null)}
+            onLogout={logout}
           />
         )}
         {forgeKey && (
