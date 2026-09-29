@@ -67,6 +67,20 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px 20px 8px; display: flex;
 .cost { color: var(--gold); font-weight: 700; font-size: .9rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bar { display: flex; height: 6px; border-radius: 99px; overflow: hidden; gap: 2px; background: var(--surface-2); }
 .bar i { display: block; min-width: 3px; }
+/* parts animées : chaque part est une fenêtre sur un dégradé aussi large que toute la barre (sinon, une part de 2 % n'en montre qu'un
+   bout minuscule et l'animation ne se voit pas). Le dégradé est dans ::before, décalé de la position de la part (--x) et
+   étiré à la largeur de la barre (100 / --w fois la part). */
+.bar i[class*='-fill'] { position: relative; overflow: hidden; background: none !important; animation: none; }
+.bar i[class*='-fill']::before {
+  content: ''; position: absolute; top: 0; bottom: 0;
+  width: calc(10000% / var(--w, 100)); left: calc(-100% * var(--x, 0) / var(--w, 100));
+  background-size: 200% 100%; animation: rb-slide 3s linear infinite;
+}
+.bar i.rainbow-fill::before { background-image: var(--rb-grad); }
+.bar i.mono-fill::before { background-image: var(--mono-grad); animation-duration: 3.6s; }
+.bar i.lava-fill::before { background-image: var(--lava-grad); animation-duration: 2.8s; }
+.bar i.mutant-fill::before { background-image: var(--mutant-grad); animation-duration: 3.2s; }
+:root[data-motion='reduce'] .bar i[class*='-fill']::before { animation: none; }
 
 /* ---------- sac équipé ---------- */
 .bonuses { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }

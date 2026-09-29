@@ -92,13 +92,19 @@ export default function Door({
       <Tip content={oddsTip}>
         <div className="door-odds">
           <div className="bar">
-            {odds.map((o) => (
-              <i
-                key={o.id}
-                className={rarityFill(o.id)}
-                style={{ width: `${(o.w / total) * 100}%`, background: o.rarity.color }}
-              />
-            ))}
+            {odds.map((o, i) => {
+              // --w : largeur de la part, --x : où elle commence (en % de la barre). Les parts animées s'en servent pour
+              // afficher chacune sa tranche d'un même dégradé qui court sur toute la barre (voir `.bar i` dans index.css)
+              const w = (o.w / total) * 100
+              const x = odds.slice(0, i).reduce((sum, p) => sum + (p.w / total) * 100, 0)
+              return (
+                <i
+                  key={o.id}
+                  className={rarityFill(o.id)}
+                  style={{ width: `${w}%`, background: o.rarity.color, '--w': w, '--x': x }}
+                />
+              )
+            })}
           </div>
           <div className="odds-top">
             {top.map((o) => (
