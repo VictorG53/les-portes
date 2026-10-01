@@ -227,6 +227,13 @@ for (const item of ITEMS) {
     item.dropWeight = item.weight ?? 1
   }
 }
+// ordre du catalogue : par rareté, puis les objets d'or du plus faible au plus fort, puis les talismans
+ITEMS.sort(
+  (a, b) =>
+    RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity) ||
+    Number(!!a.ability) - Number(!!b.ability) ||
+    (a.rank ?? 0) - (b.rank ?? 0),
+)
 // part des tirages de sa rareté qui revient à cet objet (0 à 1)
 export const dropShare = (item) => {
   const pool = ITEMS.filter((i) => i.rarity === item.rarity)

@@ -336,6 +336,8 @@ footer { text-align: center; padding: 28px 0 32px; }
 
 /* ---------- portes : une ligne par porte ---------- */
 .doors { display: flex; flex-direction: column; gap: 8px; overflow: visible; padding: 0; }
+.special-doors { margin-top: 18px; }
+.doors-sub { margin: 0 2px; font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .door-row { display: grid; grid-template-columns: 64px minmax(130px, 190px) minmax(180px, 1fr) minmax(140px, 190px) 195px; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 16px; transition: border-color .12s; }
 .door-row:not(.poor):not(.hidden-door):hover { border-color: var(--line-strong); }
 .door-row.poor .door-mini, .door-row.poor .door-name, .door-row.poor .door-odds { opacity: .55; }

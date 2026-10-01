@@ -428,6 +428,28 @@ export default function App() {
 
   // porte lointaine : jamais encore devenue abordable (une fois découverte, elle le reste, voir game.js `maxSeenDoor`)
   const isHidden = (door, i) => i > (state.stats.maxSeenDoor ?? 0)
+
+  // une ligne de porte ; `i` est son rang dans DOORS (sert à savoir si elle est encore lointaine)
+  const renderDoor = (door, i) => (
+    <Door
+      key={door.id}
+      door={door}
+      hidden={isHidden(door, i)}
+      tour={i === 0 ? 'first-open' : undefined}
+      rowTour={i === 1 ? 'second-door' : undefined}
+      gold={state.gold}
+      count={qty}
+      price={doorPrice(door, bonus.discount, bonus.permanent)}
+      scale={doorScale(door, bonus.permanent)}
+      luck={bonus.luck}
+      discount={bonus.discount}
+      shinyChance={SHINY_CHANCE + bonus.shiny}
+      opening={opening === door.id}
+      disabled={!!opening || !!reveal}
+      onOpen={() => onOpen(door)}
+    />
+  )
+
   const onOpen = (door) => {
     if (opening || reveal) return
     const results = openDoor(door.id, qty)
@@ -612,25 +634,11 @@ export default function App() {
             </div>
           </div>
           <div className="doors" data-tour="doors">
-            {DOORS.map((door, i) => (
-              <Door
-                key={door.id}
-                door={door}
-                hidden={isHidden(door, i)}
-                tour={i === 0 ? 'first-open' : undefined}
-                rowTour={i === 1 ? 'second-door' : undefined}
-                gold={state.gold}
-                count={qty}
-                price={doorPrice(door, bonus.discount, bonus.permanent)}
-                scale={doorScale(door, bonus.permanent)}
-                luck={bonus.luck}
-                discount={bonus.discount}
-                shinyChance={SHINY_CHANCE + bonus.shiny}
-                opening={opening === door.id}
-                disabled={!!opening || !!reveal}
-                onOpen={() => onOpen(door)}
-              />
-            ))}
+            {DOORS.map((door, i) => (door.charmOnly ? null : renderDoor(door, i)))}
+          </div>
+          <div className="doors special-doors">
+            <h3 className="doors-sub">Portes spéciales</h3>
+            {DOORS.map((door, i) => (door.charmOnly ? renderDoor(door, i) : null))}
           </div>
         </section>
           </div>
