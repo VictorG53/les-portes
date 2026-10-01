@@ -80,6 +80,7 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px 20px 8px; display: flex;
 .bar i.mono-fill::before { background-image: var(--mono-grad); animation-duration: 3.6s; }
 .bar i.lava-fill::before { background-image: var(--lava-grad); animation-duration: 2.8s; }
 .bar i.mutant-fill::before { background-image: var(--mutant-grad); animation-duration: 3.2s; }
+.bar i.abyss-fill::before { background-image: var(--abyss-grad); animation-duration: 3.4s; }
 :root[data-motion='reduce'] .bar i[class*='-fill']::before { animation: none; }
 
 /* ---------- sac équipé ---------- */
@@ -707,6 +708,43 @@ main > .cols, main > section { animation: tab-in .2s ease-out; }
 .card.locked[style*='--mutant'] { border-color: var(--line); background: var(--surface); animation: none; }
 .card.locked[style*='--mutant'] .badge-emoji { background: var(--surface-2); animation: none; }
 :root[data-motion='reduce'] .mutant-text, :root[data-motion='reduce'] .mutant-fill { background-position: 0 0; }
+
+/* ---------- rareté Abyssal : dégradé bleu nuit et cyan animé ---------- */
+:root {
+  --abyss: #2fb4ff; /* couleur de repli */
+  --abyss-grad: linear-gradient(90deg, #0b2a6b, #1fd0ff, #7a6bff, #1fd0ff, #0b2a6b);
+  --abyss-soft: linear-gradient(90deg, rgba(11, 42, 107, .45), rgba(31, 208, 255, .2), rgba(122, 107, 255, .22), rgba(31, 208, 255, .2), rgba(11, 42, 107, .45));
+}
+.abyss-text {
+  background: var(--abyss-grad);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  animation: rb-slide 3.2s linear infinite;
+}
+.abyss-fill { background: var(--abyss-grad) !important; background-size: 200% 100%; animation: rb-slide 3.2s linear infinite; }
+.card[style*='--abyss'],
+.slot[style*='--abyss'],
+.mini[style*='--abyss'],
+.reveal[style*='--abyss'] {
+  border-color: transparent;
+  background: var(--abyss-soft) padding-box, linear-gradient(var(--surface), var(--surface)) padding-box, var(--abyss-grad) border-box;
+  background-size: 200% 100%, 100% 100%, 200% 100%;
+  animation: rb-slide-box 3.2s linear infinite;
+}
+.slot[style*='--abyss']:hover,
+.card.equippable[style*='--abyss']:hover { filter: brightness(1.15); }
+[style*='--abyss'] .badge-emoji,
+.reveal[style*='--abyss'] .reveal-badge {
+  background: var(--abyss-soft), var(--surface-2);
+  background-size: 200% 100%, 100% 100%;
+  animation: rb-slide-tint 3.2s linear infinite;
+}
+.card.locked[style*='--abyss'] { border-color: var(--line); background: var(--surface); animation: none; }
+.card.locked[style*='--abyss'] .badge-emoji { background: var(--surface-2); animation: none; }
+:root[data-motion='reduce'] .abyss-text, :root[data-motion='reduce'] .abyss-fill { background-position: 0 0; }
 
 /* résultats d'un lot : objets et talismans en deux sections, dans une même zone défilante */
 .multi-body { width: 100%; max-height: min(50vh, 420px); overflow-y: auto; padding: 6px 4px 2px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; display: flex; flex-direction: column; gap: 14px; }

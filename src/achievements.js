@@ -1,7 +1,7 @@
 import {
   Award, Backpack, BookOpen, Biohazard, Briefcase, Clock, Coins, Crown, Diamond, DoorOpen, Droplets, EyeOff, Flame, Gem,
   Hammer, Infinity as InfinityIcon, Key, KeyRound, Landmark, Layers, Mountain, Rainbow, Skull, Sparkle,
-  Sparkles, Star, Sun, Trophy, Wrench, Zap,
+  Sparkles, Star, Sun, Trophy, Waves, Wrench, Zap,
 } from 'lucide-react'
 import { ITEMS, MAX_ENHANCE, MAX_TIER, RARITIES, RARITY_ORDER, UPGRADES, parseKey } from './data'
 import { compactNum } from './format'
@@ -40,6 +40,7 @@ const rarityAch = [
   ['eternel', InfinityIcon, 'Hors du temps', 0.1],
   ['lava', Droplets, 'Le sol est en lave', 0.12],
   ['mutant', Biohazard, 'Mutation totale', 0.15],
+  ['abyss', Waves, 'Au fond du gouffre', 0.2],
 ]
 for (const [r, icon, name, reward] of rarityAch) {
   const idx = RARITY_ORDER.indexOf(r)

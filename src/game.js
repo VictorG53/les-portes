@@ -222,7 +222,7 @@ function rollItem(door, luck = 0) {
       break
     }
   }
-  const pool = ITEMS.filter((i) => i.rarity === RARITY_ORDER[rarityIdx])
+  const pool = ITEMS.filter((i) => i.rarity === RARITY_ORDER[rarityIdx] && (!door.charmOnly || i.ability))
   let pick = Math.random() * pool.reduce((sum, i) => sum + i.dropWeight, 0)
   for (const item of pool) {
     pick -= item.dropWeight

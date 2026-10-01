@@ -94,6 +94,17 @@ const ART = {
       </>
     ),
   },
+  talismans: {
+    frame: '#2a1250', leaf: '#6a3fc4', room: '#ffe9a8',
+    details: (
+      <>
+        <path d="M32 30l11 9-11 25-11-25z" fill="#ffd95a" stroke="#2a1250" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M21 39h22M32 30l-4 9 4 25 4-25z" fill="none" stroke="#2a1250" strokeWidth="1.2" strokeLinejoin="round" opacity=".6" />
+        <path d="M32 14v6M12 56l5-3M52 56l-5-3M14 28l5 2M50 28l-5 2" stroke="#ffd95a" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="53" cy="62" r="2.5" fill="#ffd95a" />
+      </>
+    ),
+  },
   eternelle: {
     frame: '#0a0a0a', leaf: null, anim: 'mono', room: '#ffffff',
     details: (
@@ -112,6 +123,19 @@ const ART = {
         <path d="M32 10l-5 16 9 8-8 12 10 10-6 22" fill="none" stroke="#ffe08a" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
         <path d="M14 70l9-4M50 30l-8 5M14 40l7 3" stroke="#2a0800" strokeWidth="2" strokeLinecap="round" opacity=".7" />
         <circle cx="53" cy="56" r="2.5" fill="#2a0800" />
+      </>
+    ),
+  },
+  abyssale: {
+    frame: '#030a1c', leaf: null, anim: 'abyss', room: '#7fe8ff',
+    details: (
+      <>
+        <path d="M32 30c10 0 16 8 12 16s-14 10-18 4-1-12 7-12 10 8 5 11" fill="none" stroke="#020814" strokeWidth="4" strokeLinecap="round" opacity=".8" />
+        <path d="M32 30c10 0 16 8 12 16s-14 10-18 4-1-12 7-12 10 8 5 11" fill="none" stroke="#bff6ff" strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M12 68q5-4 10 0t10 0 10 0 10 0" fill="none" stroke="#020814" strokeWidth="2" strokeLinecap="round" opacity=".7" />
+        <circle cx="19" cy="24" r="2" fill="#bff6ff" opacity=".7" />
+        <circle cx="48" cy="22" r="1.5" fill="#bff6ff" opacity=".7" />
+        <circle cx="53" cy="56" r="2.5" fill="#020814" />
       </>
     ),
   },

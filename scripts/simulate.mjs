@@ -318,7 +318,7 @@ for (let i = 1; i < slow.length; i++) {
   if (slow[i].duration > slow[i - 1].duration * 2)
     alerts.push(`Le cycle ${i + 1} (${fmtTime(slow[i].duration)}) est plus long que le cycle ${i} (${fmtTime(slow[i - 1].duration)}) : le prestige ne rend pas plus fort.`)
 }
-const neverDoors = DOORS.filter((d) => results.every((r) => !r.doorsUsed.has(d.id))).map((d) => d.name)
+const neverDoors = DOORS.filter((d) => !d.charmOnly).filter((d) => results.every((r) => !r.doorsUsed.has(d.id))).map((d) => d.name)
 if (neverDoors.length) alerts.push(`Portes jamais utilisées de toute la simulation : ${neverDoors.join(', ')}.`)
 for (const [i, r] of results.entries()) {
   if (r.maxedAt) {

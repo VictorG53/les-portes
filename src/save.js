@@ -8,7 +8,7 @@ import { bestEquipment, computeStats, createState, doorPrice, isCharm, roundGold
 // La version ne change que pour une modification de STRUCTURE (champ renommé, déplacé, unité changée...) :
 // on ajoute alors une fonction à MIGRATIONS. Un simple nouveau champ n'en demande pas : normalize() complète
 // automatiquement les valeurs manquantes avec celles d'une partie neuve.
-export const SAVE_VERSION = 4
+export const SAVE_VERSION = 5
 
 // MIGRATIONS[n] transforme un état de version n en version n + 1
 const MIGRATIONS = [
@@ -82,6 +82,12 @@ const MIGRATIONS = [
     const upgrades = { ...state.upgrades }
     delete upgrades.luck
     return { ...state, upgrades, keys: state.keys + 3 * n + n * (n - 1) }
+  },
+  // 4 -> 5 : la porte des Talismans s'insère avant la porte Éternelle (indice 7), les indices des portes suivantes décalent
+  (state) => {
+    const shift = (i) => (typeof i === 'number' && i >= 7 ? i + 1 : i)
+    const stats = state.stats ?? {}
+    return { ...state, stats: { ...stats, maxDoor: shift(stats.maxDoor), maxSeenDoor: shift(stats.maxSeenDoor) } }
   },
 ]
 

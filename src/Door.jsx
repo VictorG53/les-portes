@@ -61,7 +61,7 @@ export default function Door({
           </div>
         ))}
       <div className="tt-muted">
-        Chances de chaque rareté avec cette porte.
+        {door.charmOnly ? 'Cette porte ne donne que des talismans. ' : ''}Chances de chaque rareté avec cette porte.
         {luck > 0 && ` Ta chance de +${Math.round(luck * 100)} % est déjà comptée.`}
         {` Chaque objet a ${+(shinyChance * 100).toFixed(1)} % de chances d'être shiny (✨ ×1,5).`}
       </div>

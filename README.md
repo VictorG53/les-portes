@@ -20,7 +20,7 @@ tout l'accès au stockage passe par `src/storage.js` et `src/save.js`, pour qu'o
 
 - **Portes** : chaque porte a ses probabilités de rareté. Les lots (×1 à ×250) ouvrent plusieurs portes d'un coup ;
   les gros lots se débloquent avec le prestige.
-- **Objets** : 12 raretés, de Commun à Mutant. Dans une rareté, les objets ont un rang (plus fort mais plus rare).
+- **Objets** : 13 raretés, de Commun à Abyssal. Dans une rareté, les objets ont un rang (plus fort mais plus rare).
   Une variante **shiny** rapporte ×1,5.
 - **Sacs** : le sac d'or (seuls ces objets rapportent) et les talismans (objets à capacité : ils ne rapportent pas
   d'or, mais leur effet s'applique).

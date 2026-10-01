@@ -17,6 +17,8 @@ export const RARITIES = {
   lava: { label: 'Lava', color: 'var(--lava)', income: 100000000, anim: 'lava' },
   // dégradé noir, jaune et vert toxique
   mutant: { label: 'Mutant', color: 'var(--mutant)', income: 1000000000, anim: 'mutant' },
+  // dégradé bleu nuit et cyan, comme le fond de l'océan
+  abyss: { label: 'Abyssal', color: 'var(--abyss)', income: 10000000000, anim: 'abyss' },
 }
 
 export const RARITY_ORDER = Object.keys(RARITIES)
@@ -131,9 +133,58 @@ export const ITEMS = [
 
   { id: 'baril', name: 'Baril radioactif', emoji: '☢️', rarity: 'mutant' },
   { id: 'mutant', name: 'Le Grand Mutant', emoji: '🧟', rarity: 'mutant' },
+
+  { id: 'gouffre', name: 'Gouffre sans fond', emoji: '🌀', rarity: 'abyss' },
+  { id: 'leviathan', name: 'Léviathan des abysses', emoji: '🐋', rarity: 'abyss' },
+  {
+    id: 'perle', name: 'Perle des abysses', emoji: '🦪', rarity: 'abyss', weight: 0.5,
+    ability: { type: 'global', value: 7 },
+  },
   {
     id: 'serum', name: 'Sérum mutagène', emoji: '🧬', rarity: 'mutant', weight: 0.5,
     ability: { type: 'global', value: 5 },
+  },
+
+  // talismans supplémentaires (surtout offerts par la porte des Talismans)
+  {
+    id: 'balance', name: 'Balance d\'or', emoji: '⚖️', rarity: 'mythique', weight: 0.3,
+    ability: { type: 'discount', value: 0.1 },
+  },
+  {
+    id: 'boussole', name: 'Boussole des secrets', emoji: '🧭', rarity: 'secret', weight: 0.3,
+    ability: { type: 'collector', value: 0.03 },
+  },
+  {
+    id: 'lune', name: 'Pierre de lune', emoji: '🌙', rarity: 'secret', weight: 0.3,
+    ability: { type: 'best', value: 1 },
+  },
+  {
+    id: 'halo', name: 'Halo sacré', emoji: '😇', rarity: 'divin', weight: 0.3,
+    ability: { type: 'global', value: 2 },
+  },
+  {
+    id: 'lunette', name: 'Lunette des astres', emoji: '🔭', rarity: 'cosmique', weight: 0.3,
+    ability: { type: 'best', value: 2.5 },
+  },
+  {
+    id: 'satellite', name: 'Satellite marchand', emoji: '🛰️', rarity: 'cosmique', weight: 0.3,
+    ability: { type: 'discount', value: 0.15 },
+  },
+  {
+    id: 'palette', name: 'Palette du collectionneur', emoji: '🎨', rarity: 'rainbow', weight: 0.3,
+    ability: { type: 'collector', value: 0.06 },
+  },
+  {
+    id: 'horloge', name: 'Horloge sans fin', emoji: '🕰️', rarity: 'eternel', weight: 0.3,
+    ability: { type: 'best', value: 3.5 },
+  },
+  {
+    id: 'pierre', name: 'Pierre ardente', emoji: '🪨', rarity: 'lava', weight: 0.3,
+    ability: { type: 'global', value: 4 },
+  },
+  {
+    id: 'spore', name: 'Spore mutante', emoji: '🦠', rarity: 'mutant', weight: 0.3,
+    ability: { type: 'best', value: 5 },
   },
 ]
 
@@ -156,6 +207,7 @@ const POWER_ORDER = {
   eternel: ['boucle', 'trounoir'],
   lava: ['salamandre', 'volcan'],
   mutant: ['baril', 'mutant'],
+  abyss: ['gouffre', 'leviathan'],
 }
 for (const [rarity, ids] of Object.entries(POWER_ORDER)) {
   const raw = ids.map((_, i) => RANK_POWER_STEP ** i)
@@ -189,74 +241,87 @@ export const rankInfo = (item) => {
 
 const ITEMS_BY_ID = Object.fromEntries(ITEMS.map((i) => [i.id, i]))
 
-// weights: commun, rare, épique, légendaire, mythique, secret, divin, cosmique, rainbow, éternel, lava, mutant
+// weights: commun, rare, épique, légendaire, mythique, secret, divin, cosmique, rainbow, éternel, lava, mutant, abyssal
 export const DOORS = [
   {
     id: 'bois',
     name: 'Porte en bois',
     cost: 10,
-    weights: [78, 18, 3.8, 0.2, 0, 0, 0, 0, 0, 0, 0, 0],
+    weights: [78, 18, 3.8, 0.2, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   },
   {
     id: 'fer',
     name: 'Porte en fer',
     cost: 150,
-    weights: [40, 42, 15, 2.8, 0.2, 0, 0, 0, 0, 0, 0, 0],
+    weights: [40, 42, 15, 2.8, 0.2, 0, 0, 0, 0, 0, 0, 0, 0],
   },
   {
     id: 'or',
     name: 'Porte dorée',
     cost: 2500,
-    weights: [0, 40, 45, 13, 1.9, 0.1, 0, 0, 0, 0, 0, 0],
+    weights: [0, 40, 45, 13, 1.9, 0.1, 0, 0, 0, 0, 0, 0, 0],
   },
   {
     id: 'runes',
     name: 'Porte runique',
     cost: 40000,
-    weights: [0, 0, 55, 35, 9, 1, 0, 0, 0, 0, 0, 0],
+    weights: [0, 0, 55, 35, 9, 1, 0, 0, 0, 0, 0, 0, 0],
   },
   {
     id: 'cristal',
     name: 'Porte en cristal',
     cost: 600000,
-    weights: [0, 0, 10, 45, 30, 10, 5, 0, 0, 0, 0, 0],
+    weights: [0, 0, 10, 45, 30, 10, 5, 0, 0, 0, 0, 0, 0],
   },
   {
     id: 'neant',
     name: 'Porte du Néant',
     cost: 12000000,
-    weights: [0, 0, 0, 20, 55, 15, 9, 1, 0, 0, 0, 0],
+    weights: [0, 0, 0, 20, 55, 15, 9, 1, 0, 0, 0, 0, 0],
   },
   {
     id: 'rainbow',
     name: 'Porte Rainbow',
     cost: 250000000,
-    weights: [0, 0, 0, 0, 30, 40, 20, 8, 2, 0, 0, 0],
+    weights: [0, 0, 0, 0, 30, 40, 20, 8, 2, 0, 0, 0, 0],
+  },
+  {
+    id: 'talismans',
+    name: 'Porte des Talismans',
+    cost: 1000000000,
+    charmOnly: true, // ne donne que des talismans
+    weights: [0, 0, 0, 40, 30, 16, 9, 4, 0.8, 0.2, 0, 0, 0],
   },
   {
     id: 'eternelle',
     name: 'Porte Éternelle',
     cost: 5000000000,
-    weights: [0, 0, 0, 0, 0, 40, 35, 20, 4.5, 0.5, 0, 0],
+    weights: [0, 0, 0, 0, 0, 40, 35, 20, 4.5, 0.5, 0, 0, 0],
   },
   {
     id: 'lave',
     name: 'Porte de Lave',
     cost: 100000000000,
-    weights: [0, 0, 0, 0, 0, 0, 30, 35, 22, 10, 3, 0],
+    weights: [0, 0, 0, 0, 0, 0, 30, 35, 22, 10, 3, 0, 0],
   },
   {
     id: 'mutante',
     name: 'Porte Mutante',
     cost: 2000000000000,
-    weights: [0, 0, 0, 0, 0, 0, 0, 25, 40, 22, 11, 2],
+    weights: [0, 0, 0, 0, 0, 0, 0, 25, 40, 22, 11, 2, 0],
+  },
+  {
+    id: 'abyssale',
+    name: 'Porte Abyssale',
+    cost: 50000000000000,
+    weights: [0, 0, 0, 0, 0, 0, 0, 0, 25, 40, 22, 10, 3],
   },
 ]
 
 // Les portes chères s'adaptent à ta puissance permanente (Fortune, clés, succès) : leur prix est multiplié par
 // puissance ^ exposant. Les premières portes n'en dépendent pas (le début va de plus en plus vite avec les prestiges),
 // la dernière suit ta puissance de près, si bien qu'elle reste longue à atteindre.
-export const DOOR_PRICE_EXP = { bois: 0, fer: 0, or: 0, runes: 0.3, cristal: 0.5, neant: 0.65, rainbow: 0.8, eternelle: 0.95, lave: 1, mutante: 1 }
+export const DOOR_PRICE_EXP = { bois: 0, fer: 0, or: 0, runes: 0.3, cristal: 0.5, neant: 0.65, rainbow: 0.8, talismans: 0.9, eternelle: 0.95, lave: 1, mutante: 1, abyssale: 1 }
 
 // classe CSS à ajouter au texte d'une rareté (dégradé arc-en-ciel animé pour Rainbow)
 export const rarityClass = (rarity) => (RARITIES[rarity]?.anim ? `${RARITIES[rarity].anim}-text` : '')
