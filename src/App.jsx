@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, MotionConfig } from 'framer-motion'
 import {
-  Backpack, Clover, Flame, Gem, Hammer, HelpCircle, KeyRound, Lock, Settings as SettingsIcon,
+  Backpack, Clover, Flame, Gem, Hammer, HelpCircle, KeyRound, Lock, LockOpen, Repeat, Settings as SettingsIcon,
   Sparkles, Star, Tag, TrendingUp, Trophy, Volume2, VolumeX, Zap,
 } from 'lucide-react'
 import {
@@ -11,6 +11,7 @@ import {
   QUANTITIES,
   MAX_TIER,
   RARITIES,
+  RARITY_ORDER,
   PRESTIGE_BASE,
   SHINY_CHANCE,
   TIER_MULT,
@@ -18,7 +19,6 @@ import {
   abilityShort,
   abilityText,
   itemIncome,
-  itemSell,
   keyOf,
   keyMultiplier,
   parseKey,
@@ -43,6 +43,7 @@ import {
   maxBatch,
   maxCharmSlots,
   maxSlots,
+  sellPlan,
   slotCost,
   startCharmSlots,
   startGold,
@@ -54,6 +55,9 @@ import {
 import Door from './Door'
 import Reveal from './Reveal'
 import Welcome from './Welcome'
+import Profiles from './Profiles'
+import DrawLog from './DrawLog'
+import LoopModal from './LoopModal'
 import Confirm from './Confirm'
 import Forge from './Forge'
 import Logo from './Logo'
@@ -77,7 +81,7 @@ import { api } from './api'
 
 
 export default function App() {
-  const { state: liveState, loadState, welcome, closeWelcome, toasts, dismissToast, openDoor, equip, unequip, fuse, setAutoFuse, autoEquip, buySlot, buyCharmSlot, enhance, sellDuplicates, prestige, setTutorial, buyUpgrade, reset } =
+  const { state: liveState, loadState, welcome, closeWelcome, toasts, dismissToast, openDoor, equip, unequip, fuse, setAutoFuse, autoEquip, buySlot, buyCharmSlot, enhance, sellDuplicates, toggleLock, saveProfile, loadProfile, prestige, setTutorial, buyUpgrade, reset } =
     useGame()
   const [reveal, setReveal] = useState(null) // liste de { item, isNew }
   // Photo de la partie prise juste avant l'ouverture d'une porte : l'affichage (objets, sacs, collection, bonus...)
@@ -106,6 +110,14 @@ export default function App() {
     saveSettings(settings)
   }, [settings])
   const [opening, setOpening] = useState(null) // id de la porte en cours d'ouverture
+  const [showLoop, setShowLoop] = useState(false) // fenêtre d'ouverture en boucle
+  const [drawLog, setDrawLog] = useState([]) // derniers tirages de la session
+  const logSeq = useRef(0)
+  const logResults = (doorId, results) => {
+    const name = DOORS.find((d) => d.id === doorId)?.name ?? ''
+    const rows = results.map((r) => ({ ...r, door: name, id: ++logSeq.current }))
+    setDrawLog((l) => [...rows.reverse(), ...l].slice(0, 25))
+  }
 
   // compte joueur : { token, pseudo } | null. Obligatoire pour jouer (voir le garde-fou en fin de fonction) ;
   // sert aussi au classement et à la sauvegarde synchronisée entre appareils.
@@ -309,12 +321,9 @@ export default function App() {
   const equippedList = Object.entries(state.equipped)
     .flatMap(([key, n]) => Array(n).fill(parseKey(key)))
     .sort((x, y) => itemIncome(y.item, y.tier, y.shiny, y.level) - itemIncome(x.item, x.tier, x.shiny, x.level))
-  // or obtenu en vendant les doublons (on garde toujours les équipés et 1 exemplaire de chaque pile)
-  const dupValue = Object.entries(state.inventory).reduce((sum, [key, n]) => {
-    const keep = Math.max(1, bagOf(state, key)[key] ?? 0)
-    const { item, tier, shiny } = parseKey(key)
-    return sum + (n - keep) * itemSell(item, tier, shiny)
-  }, 0)
+  // or obtenu en vendant les doublons (on garde toujours les équipés, 1 exemplaire de chaque pile et les piles verrouillées)
+  const [sellRarity, setSellRarity] = useState('all')
+  const dupValue = sellPlan(state, sellRarity === 'all' ? null : sellRarity).gain
   const fc = fuseCount(state)
   const achDone = ACHIEVEMENTS.filter((a) => state.achievements[a.id])
   const achGroups = [...new Set(ACHIEVEMENTS.map((a) => a.group))]
@@ -338,6 +347,27 @@ export default function App() {
     if (owned.length) return owned.map((key) => ({ key }))
     return [{ locked: !state.codex[item.id], seen: !!state.codex[item.id], item }]
   })
+
+  // gain de revenu si on équipe cet exemplaire (sac d'or seulement : il prend une place libre ou remplace le plus faible)
+  const compareLines = (key, equippable) => {
+    if (!equippable || used === undefined) return []
+    const p = parseKey(key)
+    if (p.item.ability) return []
+    const hypo = { ...state.equipped }
+    if (used >= state.slots) {
+      const weakest = Object.keys(hypo).sort(
+        (a, b) => itemIncome(parseKey(a).item, parseKey(a).tier, parseKey(a).shiny, parseKey(a).level) - itemIncome(parseKey(b).item, parseKey(b).tier, parseKey(b).shiny, parseKey(b).level),
+      )[0]
+      if (!weakest) return []
+      if (itemIncome(parseKey(weakest).item, parseKey(weakest).tier, parseKey(weakest).shiny, parseKey(weakest).level) >= itemIncome(p.item, p.tier, p.shiny, p.level)) return []
+      hypo[weakest] -= 1
+      if (hypo[weakest] <= 0) delete hypo[weakest]
+    }
+    hypo[key] = (hypo[key] ?? 0) + 1
+    const delta = computeStats({ ...state, equipped: hypo }).income - income
+    if (Math.abs(delta) < 0.005) return []
+    return [`${used >= state.slots ? 'À la place du plus faible' : 'En l’équipant'} : ${delta > 0 ? '+' : '−'}${formatNum(Math.abs(delta))}/s`]
+  }
 
   // une tuile du sac d'or (charm = false) ou des talismans (charm = true)
   const renderSlot = (entry, i, charm) => {
@@ -454,6 +484,7 @@ export default function App() {
     if (opening || reveal) return
     const results = openDoor(door.id, qty)
     if (!results) return
+    logResults(door.id, results)
     setFrozen(liveState)
     setOpening(door.id)
     play('open')
@@ -631,6 +662,11 @@ export default function App() {
               )}
             </div>
             </Tip>
+            <Tip wrap content={<Text title="Ouverture en boucle">Ouvre des portes à la chaîne, sans écran de résultat, jusqu'à une condition d'arrêt (or restant, rareté obtenue, nombre maximum).</Text>}>
+              <button className="btn small ghost" disabled={!!opening || !!reveal} onClick={() => setShowLoop(true)}>
+                <Repeat size={14} strokeWidth={2.25} /> En boucle
+              </button>
+            </Tip>
             </div>
           </div>
           <div className="doors" data-tour="doors">
@@ -640,6 +676,7 @@ export default function App() {
             <h3 className="doors-sub">Portes spéciales</h3>
             {DOORS.map((door, i) => (door.charmOnly ? renderDoor(door, i) : null))}
           </div>
+          <DrawLog entries={drawLog} />
         </section>
           </div>
           <aside className="cols-side">
@@ -817,6 +854,7 @@ export default function App() {
           <div className="slots">
             {Array.from({ length: state.charmSlots }, (_, i) => renderSlot(charmsList[i], i, true))}
           </div>
+          <Profiles profiles={state.profiles ?? [null, null, null]} onSave={saveProfile} onLoad={loadProfile} />
         </section>
           </aside>
           <div className="cols-main">
@@ -855,17 +893,25 @@ export default function App() {
                 Fusion automatique
               </label>
             </Tip>
-            <Tip wrap content={<Text title="Vendre les doublons">Vend les exemplaires en trop. Tu gardes toujours un exemplaire de chaque objet et tous ceux qui sont équipés. Attention : cela vend aussi les exemplaires que tu comptais fusionner.</Text>}>
-              <button
-                className="btn small ghost"
-                disabled={dupValue <= 0}
-                onClick={() => {
-                  sellDuplicates()
-                  play('sell')
-                }}
-              >
-                Vendre les doublons (+{formatNum(dupValue)} or)
-              </button>
+            <Tip wrap content={<Text title="Vendre les doublons">Vend les exemplaires en trop, pour toutes les raretés ou pour une seule. Tu gardes toujours un exemplaire de chaque objet, tous ceux qui sont équipés et ceux que tu as verrouillés (cadenas). Attention : cela vend aussi les exemplaires que tu comptais fusionner.</Text>}>
+              <span className="sell-group">
+                <select className="select" aria-label="Rareté à vendre" value={sellRarity} onChange={(e) => setSellRarity(e.target.value)}>
+                  <option value="all">Toutes raretés</option>
+                  {RARITY_ORDER.map((r) => (
+                    <option key={r} value={r}>{RARITIES[r].label}</option>
+                  ))}
+                </select>
+                <button
+                  className="btn small ghost"
+                  disabled={dupValue <= 0}
+                  onClick={() => {
+                    sellDuplicates(sellRarity === 'all' ? null : sellRarity)
+                    play('sell')
+                  }}
+                >
+                  Vendre les doublons (+{formatNum(dupValue)} or)
+                </button>
+              </span>
             </Tip>
             </div>
           </div>
@@ -910,7 +956,8 @@ export default function App() {
               const r = RARITIES[item.rarity]
               const bagFull = charm ? charmsUsed >= state.charmSlots : used >= state.slots
               const canEquip = e < n && !bagFull
-              const canFuse = n >= fc && tier < MAX_TIER
+              const isLocked = !!state.locked?.[k]
+              const canFuse = n >= fc && tier < MAX_TIER && !isLocked
               const lines = [
                 `Possédé : ${n}${e > 0 ? ` (dont ${e} équipé${e > 1 ? 's' : ''})` : ''}`,
                 tier < MAX_TIER
@@ -919,6 +966,8 @@ export default function App() {
                 level < MAX_ENHANCE
                   ? `Forge (⚒) : tenter +${level + 1}, ${Math.round(enhanceRate(state, level) * 100)} % de réussite`
                   : 'Amélioration maximale atteinte',
+                ...(isLocked ? ['🔒 Verrouillé : jamais fusionné, vendu ni tenté à la forge'] : []),
+                ...compareLines(k, e < n && !charm),
               ]
               const hint = canEquip
                 ? 'Cliquer pour équiper'
@@ -944,6 +993,18 @@ export default function App() {
                     </div>
                   )}
                   {n > 1 && <div className="pill count">×{n}</div>}
+                  <button
+                    className={`lock-btn ${isLocked ? 'on' : ''}`}
+                    aria-label={isLocked ? 'Déverrouiller' : 'Verrouiller'}
+                    aria-pressed={isLocked}
+                    onClick={(ev) => {
+                      ev.stopPropagation()
+                      toggleLock(k)
+                      play('click')
+                    }}
+                  >
+                    {isLocked ? <Lock size={12} strokeWidth={2.5} /> : <LockOpen size={12} strokeWidth={2.25} />}
+                  </button>
                   <div className="badge-emoji">{item.emoji}</div>
                   <div className="name">
                     <span>
@@ -978,6 +1039,7 @@ export default function App() {
                   {level < MAX_ENHANCE && (
                     <button
                       className="fuse enhance"
+                      disabled={isLocked}
                       onClick={(ev) => {
                         ev.stopPropagation()
                         setForgeKey(k)
@@ -1155,6 +1217,7 @@ export default function App() {
         {reveal && (
           <Reveal
             results={reveal}
+            pseudo={auth?.pseudo}
             onClose={() => {
               setReveal(null)
               setFrozen(null)
@@ -1162,6 +1225,19 @@ export default function App() {
           />
         )}
         {!reveal && welcome && <Welcome {...welcome} onClose={closeWelcome} />}
+        <AnimatePresence>
+          {showLoop && (
+            <LoopModal
+              getLive={() => latest.current.live}
+              bonus={bonus}
+              maxSeenDoor={state.stats.maxSeenDoor ?? 0}
+              batchMax={batchMax}
+              openDoor={openDoor}
+              onResults={logResults}
+              onClose={() => setShowLoop(false)}
+            />
+          )}
+        </AnimatePresence>
         {showSettings && (
           <Settings
             settings={settings}

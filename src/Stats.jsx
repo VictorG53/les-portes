@@ -1,7 +1,7 @@
 import { KeyRound } from 'lucide-react'
 import { ACHIEVEMENTS } from './achievements'
-import { DOORS, ITEMS, QUANTITIES, RARITIES, RARITY_ORDER, UPGRADE_STEP, keyMultiplier, rarityClass, rarityFill, starsText } from './data'
-import { formatMult, formatNum, upLevel } from './game'
+import { DOORS, ITEMS, PRESTIGE_BASE, QUANTITIES, RARITIES, RARITY_ORDER, UPGRADE_STEP, keyMultiplier, prestigeGain, prestigeNextAt, rarityClass, rarityFill, starsText } from './data'
+import { charmSlotCost, doorPrice, formatMult, formatNum, maxCharmSlots, maxSlots, slotCost, upLevel } from './game'
 
 const int = (n) => Math.round(n).toLocaleString('fr-FR')
 
@@ -63,6 +63,31 @@ function Bars({ rows, labelWidth = 92 }) {
   )
 }
 
+// courbe du revenu par seconde : un point toutes les 10 minutes environ (échelle logarithmique, le revenu explose vite)
+function IncomeChart({ log }) {
+  if (log.length < 2) return <div className="muted empty-note">La courbe se remplit au fil du jeu (un point toutes les 10 minutes).</div>
+  const W = 320
+  const H = 90
+  const ys = log.map(([, v]) => Math.log10(Math.max(1, v)))
+  const lo = Math.min(...ys)
+  const hi = Math.max(...ys, lo + 0.5)
+  const t0 = log[0][0]
+  const t1 = log[log.length - 1][0]
+  const pts = log.map(([t], i) => `${((t - t0) / Math.max(1, t1 - t0)) * W},${H - 4 - ((ys[i] - lo) / (hi - lo)) * (H - 10)}`)
+  return (
+    <div className="chart">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Courbe du revenu par seconde" preserveAspectRatio="none">
+        <polyline points={pts.join(' ')} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="chart-axis muted">
+        <span>{formatNum(log[0][1])}/s</span>
+        <span>{duration((t1 - t0) / 1000)}</span>
+        <span>{formatNum(log[log.length - 1][1])}/s</span>
+      </div>
+    </div>
+  )
+}
+
 export default function Stats({ state, income, bonus }) {
   const st = state.stats
   const lifetimeEarned = st.earnedBefore + state.runEarned + st.offlineGold
@@ -82,6 +107,16 @@ export default function Stats({ state, income, bonus }) {
   const fortune = 1 + upLevel(state, 'income') * UPGRADE_STEP.income
   const keysMult = keyMultiplier(state.totalKeys)
   const bestDoor = DOORS[st.maxDoor]
+
+  // temps estimé avant les prochains objectifs, au revenu actuel (l'or déjà en poche compte)
+  const eta = (cost) => (state.gold >= cost ? 'maintenant' : income > 0 ? duration((cost - state.gold) / income) : '—')
+  const goals = []
+  const nextDoor = DOORS[(st.maxSeenDoor ?? 0) + 1] // première porte qu'on n'a jamais pu s'offrir
+  if (nextDoor) goals.push([`Porte suivante · ${nextDoor.name}`, doorPrice(nextDoor, bonus.discount, bonus.permanent)])
+  const gainNow = prestigeGain(state.runEarned)
+  goals.push([`Prochaine clé de prestige (${gainNow + 1}e de la partie)`, null, (gainNow < 1 ? PRESTIGE_BASE : prestigeNextAt(gainNow)) - state.runEarned])
+  if (state.slots < maxSlots(state)) goals.push(['Emplacement de sac', slotCost(state.slots)])
+  if (state.charmSlots < maxCharmSlots(state)) goals.push(['Emplacement de talisman', charmSlotCost(state.charmSlots)])
 
   return (
     <section className="stats-page">
@@ -112,6 +147,16 @@ export default function Stats({ state, income, bonus }) {
 
         <Card title="Objets obtenus par rareté" note={st.shinies > 0 ? `dont ${int(st.shinies)} shiny` : null}>
           <Bars rows={rarityRows} />
+        </Card>
+
+        <Card title="Revenu au fil du temps" note="Revenu par seconde, échelle logarithmique.">
+          <IncomeChart log={st.incomeLog ?? []} />
+        </Card>
+
+        <Card title="Prochains objectifs" note="Au revenu actuel, sans compter les nouveaux objets que tu obtiendras.">
+          {goals.map(([label, cost, remaining]) => (
+            <Row key={label} label={label} value={cost !== null ? eta(cost) : income > 0 ? duration(Math.max(0, remaining) / income) : '—'} />
+          ))}
         </Card>
 
         <Card title="Records">

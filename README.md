@@ -11,6 +11,7 @@ npm run dev       # serveur de développement
 npm run build     # version de production (dossier dist/)
 npm run lint      # vérifications de code (oxlint)
 npm run simulate  # simulateur d'équilibrage (voir plus bas)
+npm test          # tests automatiques (vitest) : tirages, vente, verrous, prestige, migrations de sauvegarde
 ```
 
 La partie est sauvegardée automatiquement dans le navigateur (`localStorage`). Il n'y a pas de serveur pour l'instant :
@@ -28,6 +29,11 @@ tout l'accès au stockage passe par `src/storage.js` et `src/save.js`, pour qu'o
 - **Forge** : améliore un exemplaire de +1 à +5, avec un risque de le perdre.
 - **Prestige** : le Portail éternel remet la partie à zéro contre des clés, à dépenser en améliorations permanentes.
 - **Succès** : bonus de revenu permanents.
+- **Confort** : cadenas sur les objets (jamais fusionnés, vendus ni forgés), vente des doublons par rareté, profils
+  d'équipement, ouverture en boucle (arrêt sur or restant, rareté ou nombre), journal des tirages, comparaison de
+  revenu dans l'infobulle, courbe du revenu et temps estimé avant les prochains objectifs (onglet Statistiques).
+- **Appareil** : thèmes de couleurs (dont un contraste élevé), carte image
+  à partager pour un bel objet, interface installable et utilisable hors ligne (`public/sw.js`).
 - **Gain hors ligne** : 25 % du revenu, sur 2 h au maximum (amélioré par « Sommeil profond » : jusqu’à 65 % sur 6 h).
 
 ## Organisation du code

@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Sparkles, Zap } from 'lucide-react'
+import { Share2, Sparkles, Zap } from 'lucide-react'
 import { RARITIES, RARITY_ORDER, abilityText, itemIncome, rarityClass } from './data'
 import { formatNum } from './game'
 import { playReveal } from './sound'
 import { groupResults, revealStep } from './revealUtils'
+import { shareItem } from './shareCard'
 
 const rarityIdx = (item) => RARITY_ORDER.indexOf(item.rarity)
 
-export default function Reveal({ results, onClose }) {
+// intensité de l'effet d'apparition : « high » à partir de Secret, « ultra » à partir de Rainbow (ou shiny très rare)
+const fxLevel = (idx) => (idx >= RARITY_ORDER.indexOf('rainbow') ? 'ultra' : idx >= RARITY_ORDER.indexOf('secret') ? 'high' : '')
+
+export default function Reveal({ results, pseudo, onClose }) {
   useEffect(() => playReveal(results), [results])
 
   const sorted = [...results].sort(
@@ -17,6 +21,7 @@ export default function Reveal({ results, onClose }) {
   const best = sorted[0].item
   const bestShiny = sorted[0].shiny
   const bestColor = RARITIES[best.rarity].color
+  const fx = fxLevel(rarityIdx(best)) || (bestShiny ? 'high' : '')
   const single = results.length === 1
   const tiles = groupResults(results)
   const step = revealStep(tiles.length)
@@ -51,9 +56,10 @@ export default function Reveal({ results, onClose }) {
       exit={{ opacity: 0 }}
       onClick={close}
     >
+      {fx && <div className={`reveal-flash ${fx}`} aria-hidden="true" />}
       {single ? (
         <motion.div
-          className="reveal"
+          className={`reveal ${fx ? `fx-${fx}` : ''}`}
           style={{ '--c': bestColor }}
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -81,6 +87,11 @@ export default function Reveal({ results, onClose }) {
           <button className="btn" disabled={!ready} onClick={onClose}>
             Continuer
           </button>
+          {rarityIdx(best) >= RARITY_ORDER.indexOf('epique') && (
+            <button className="link share-link" onClick={() => shareItem(results[0], pseudo)}>
+              <Share2 size={13} strokeWidth={2.25} /> Partager
+            </button>
+          )}
         </motion.div>
       ) : (
         <motion.div

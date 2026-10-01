@@ -12,7 +12,10 @@ export const DEFAULT_SETTINGS = {
   numberFormat: 'short', // 'short' (1,23M) | 'scientific' (1,23e6)
   toasts: true, // notifications de succès
   tips: true, // conseils contextuels du didacticiel
+  theme: 'bronze', // palette : voir THEMES
 }
+
+export const THEMES = [['bronze', 'Bronze'], ['night', 'Nuit'], ['forest', 'Forêt'], ['contrast', 'Contraste']]
 
 const clean = (s) => ({
   volume: Math.min(1, Math.max(0, Number(s.volume) || 0)),
@@ -23,6 +26,7 @@ const clean = (s) => ({
   numberFormat: ['short', 'scientific'].includes(s.numberFormat) ? s.numberFormat : DEFAULT_SETTINGS.numberFormat,
   toasts: s.toasts !== false,
   tips: s.tips !== false,
+  theme: THEMES.some(([id]) => id === s.theme) ? s.theme : DEFAULT_SETTINGS.theme,
 })
 
 export function loadSettings() {
@@ -42,4 +46,5 @@ export function applySettings(s) {
   setHaptics(s.haptics)
   setNumberFormat(s.numberFormat)
   document.documentElement.dataset.motion = s.motion
+  document.documentElement.dataset.theme = s.theme
 }

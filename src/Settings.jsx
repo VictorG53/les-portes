@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { DEFAULT_SETTINGS } from './settingsStore'
+import { DEFAULT_SETTINGS, THEMES } from './settingsStore'
 import { formatNumMode } from './game'
 import { play } from './sound'
 
@@ -95,6 +95,13 @@ export default function Settings({ settings, onChange, onClose, onResetGame, onR
           <div className="settings-title">Affichage</div>
           <Row title="Animations" hint="« Auto » suit le réglage de ton système.">
             <Segmented label="Animations" value={settings.motion} options={MOTION} onChange={(motion) => onChange({ motion })} />
+          </Row>
+          <Row title="Thème" hint="Palette de couleurs. « Contraste » renforce la lisibilité.">
+            <select className="select" aria-label="Thème" value={settings.theme} onChange={(e) => onChange({ theme: e.target.value })}>
+              {THEMES.map(([id, label]) => (
+                <option key={id} value={id}>{label}</option>
+              ))}
+            </select>
           </Row>
           <Row title="Format des nombres" hint={`Exemple : ${formatNumMode(EXAMPLE, settings.numberFormat)}`}>
             <Segmented label="Format des nombres" value={settings.numberFormat} options={FORMATS} onChange={(numberFormat) => onChange({ numberFormat })} />

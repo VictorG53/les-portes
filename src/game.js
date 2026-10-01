@@ -43,6 +43,8 @@ const initialState = {
   charms: {}, // talismans équipés : objets à capacité, ils ne rapportent pas d'or mais leur effet s'applique
   charmSlots: BASE_CHARM_SLOTS,
   autoFuse: false, // fusion automatique des objets identiques
+  locked: {}, // exemplaires verrouillés (clé -> 1) : jamais fusionnés, vendus ni tentés à la forge
+  profiles: [null, null, null], // équipements enregistrés : { equipped, charms } | null
   opened: 0, // total, toutes parties confondues
   bestRarity: -1,
   codex: {}, // objets déjà découverts (persistent au prestige)
@@ -75,6 +77,7 @@ const initialState = {
     fusions: 0,
     forgeOk: 0,
     forgeFail: 0,
+    incomeLog: [], // courbe du revenu : [horodatage, revenu/s], un point toutes les 10 min environ
     runs: [], // historique des parties terminées par un prestige : { seconds, earned, keys }
   },
   runSeconds: 0, // temps de jeu actif de la partie en cours
@@ -283,11 +286,11 @@ export function collectionValue(inventory) {
 export { formatMult, formatNum, formatNumMode, setNumberFormat } from './format'
 
 // fusionne fuseCount(s) exemplaires d'une même clé en 1 exemplaire du niveau supérieur
-function fuseKey(s, key) {
+export function fuseKey(s, key) {
   const { item, tier, shiny, level } = parseKey(key)
   const n = s.inventory[key] ?? 0
   const need = fuseCount(s)
-  if (tier >= MAX_TIER || n < need || level > 0) return s // les objets améliorés ne se fusionnent pas
+  if (tier >= MAX_TIER || n < need || level > 0 || s.locked?.[key]) return s // les objets améliorés ou verrouillés ne se fusionnent pas
   const newKey = keyOf(item.id, tier + 1, shiny)
 
   const inventory = { ...s.inventory, [key]: n - need }
@@ -317,7 +320,7 @@ function fuseAll(state) {
   let s = state
   for (let guard = 0; guard < 10000; guard++) {
     const key = Object.keys(s.inventory).find(
-      (k) => s.inventory[k] >= fuseCount(s) && parseKey(k).tier < MAX_TIER && parseKey(k).level === 0,
+      (k) => s.inventory[k] >= fuseCount(s) && parseKey(k).tier < MAX_TIER && parseKey(k).level === 0 && !s.locked?.[k],
     )
     if (!key) break
     s = fuseKey(s, key)
@@ -432,6 +435,16 @@ const seenDoorIndex = (s, bonus) => {
   return idx
 }
 
+// ajoute un point à la courbe du revenu s'il s'est écoulé assez de temps depuis le dernier (on garde ~2 jours)
+const INCOME_LOG_EVERY = 600_000
+const INCOME_LOG_MAX = 288
+function logIncome(log = [], income) {
+  const now = Date.now()
+  const last = log[log.length - 1]
+  if (last && now - last[0] < INCOME_LOG_EVERY) return log
+  return [...log, [now, income]].slice(-INCOME_LOG_MAX)
+}
+
 export function tickState(s, dt) {
   const { income, bonus } = computeStats(s)
   const inc = income * dt
@@ -446,6 +459,7 @@ export function tickState(s, dt) {
       playSeconds: s.stats.playSeconds + dt,
       maxIncome: Math.max(s.stats.maxIncome, income),
       maxSeenDoor: seenDoorIndex({ ...s, gold }, bonus),
+      incomeLog: logIncome(s.stats.incomeLog, income),
     },
   }
 }
@@ -542,7 +556,7 @@ export function applyBuySlot(s) {
 // prépare la tentative (tirage et coût) sans modifier l'état ; null si impossible
 export function rollEnhance(s, key) {
   const { item, tier, shiny, level } = parseKey(key)
-  if (level >= MAX_ENHANCE || (s.inventory[key] ?? 0) < 1) return null
+  if (level >= MAX_ENHANCE || (s.inventory[key] ?? 0) < 1 || s.locked?.[key]) return null
   const cost = enhanceCost(item, tier, shiny, level)
   if (s.gold < cost) return null
   return { key, cost, success: Math.random() < enhanceRate(s, level), level }
@@ -605,19 +619,58 @@ function applyUnequip(s, key) {
   return { ...s, [name]: bag }
 }
 
-// vend les exemplaires en trop : on garde toujours les équipés, et 1 exemplaire minimum
-function applySell(s) {
+// exemplaires en trop qu'on peut vendre : on garde toujours les équipés, 1 exemplaire minimum, et les piles verrouillées.
+// `rarity` restreint la vente à une rareté (null = toutes). Renvoie les quantités à garder et le gain.
+export function sellPlan(s, rarity = null) {
   let gain = 0
   const inventory = {}
   for (const [id, n] of Object.entries(s.inventory)) {
-    const keep = Math.max(1, bagOf(s, id)[id] ?? 0)
-    inventory[id] = keep
     const { item, tier, shiny } = parseKey(id)
+    const skip = s.locked?.[id] || (rarity && item.rarity !== rarity)
+    const keep = skip ? n : Math.max(1, bagOf(s, id)[id] ?? 0)
+    inventory[id] = keep
     gain += (n - keep) * itemSell(item, tier, shiny)
   }
+  return { inventory, gain }
+}
+
+export function applySell(s, rarity = null) {
+  const { inventory, gain } = sellPlan(s, rarity)
   return gain > 0
     ? { ...s, gold: roundGold(s.gold + gain), runEarned: roundGold(s.runEarned + gain), inventory }
     : s
+}
+
+// verrouille / déverrouille un exemplaire
+export function applyToggleLock(s, key) {
+  const locked = { ...s.locked }
+  if (locked[key]) delete locked[key]
+  else locked[key] = 1
+  return { ...s, locked }
+}
+
+// enregistre l'équipement actuel dans l'emplacement `i`, ou le rétablit (en ignorant ce qu'on ne possède plus)
+export function applySaveProfile(s, i) {
+  const profiles = [...(s.profiles ?? [null, null, null])]
+  profiles[i] = { equipped: { ...s.equipped }, charms: { ...s.charms } }
+  return { ...s, profiles }
+}
+export function applyLoadProfile(s, i) {
+  const p = s.profiles?.[i]
+  if (!p) return s
+  const fit = (saved, cap) => {
+    const bag = {}
+    let free = cap
+    for (const [k, n] of Object.entries(saved)) {
+      const take = Math.min(n, s.inventory[k] ?? 0, free)
+      if (take > 0) {
+        bag[k] = take
+        free -= take
+      }
+    }
+    return bag
+  }
+  return { ...s, equipped: fit(p.equipped, s.slots), charms: fit(p.charms, s.charmSlots) }
 }
 
 // Hook principal du jeu. Il ne persiste rien : la partie vit sur le serveur (voir App.jsx). Elle démarre
@@ -725,7 +778,10 @@ export function useGame() {
   }, [])
 
   const buyCharmSlot = useCallback(() => setState(applyBuyCharmSlot), [])
-  const sellDuplicates = useCallback(() => setState(applySell), [])
+  const sellDuplicates = useCallback((rarity = null) => setState((s) => applySell(s, rarity)), [])
+  const toggleLock = useCallback((key) => setState((s) => applyToggleLock(s, key)), [])
+  const saveProfile = useCallback((i) => setState((s) => applySaveProfile(s, i)), [])
+  const loadProfile = useCallback((i) => setState((s) => applyLoadProfile(s, i)), [])
 
   // met à jour l'état du didacticiel (étape, terminé, conseils vus)
   const setTutorial = useCallback((patch) => {
@@ -777,6 +833,9 @@ export function useGame() {
     buyCharmSlot,
     enhance,
     sellDuplicates,
+    toggleLock,
+    saveProfile,
+    loadProfile,
     prestige,
     setTutorial,
     buyUpgrade,
