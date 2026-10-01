@@ -8,7 +8,7 @@ import { bestEquipment, computeStats, createState, doorPrice, isCharm, roundGold
 // La version ne change que pour une modification de STRUCTURE (champ renommé, déplacé, unité changée...) :
 // on ajoute alors une fonction à MIGRATIONS. Un simple nouveau champ n'en demande pas : normalize() complète
 // automatiquement les valeurs manquantes avec celles d'une partie neuve.
-export const SAVE_VERSION = 3
+export const SAVE_VERSION = 4
 
 // MIGRATIONS[n] transforme un état de version n en version n + 1
 const MIGRATIONS = [
@@ -74,6 +74,14 @@ const MIGRATIONS = [
       codex,
       codexShiny,
     }
+  },
+  // 3 -> 4 : l'amélioration « Baraka » (luck) a été supprimée, ses clés sont remboursées
+  (state) => {
+    const n = state.upgrades?.luck ?? 0
+    if (!n) return state
+    const upgrades = { ...state.upgrades }
+    delete upgrades.luck
+    return { ...state, upgrades, keys: state.keys + 3 * n + n * (n - 1) }
   },
 ]
 

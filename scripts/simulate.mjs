@@ -73,7 +73,7 @@ const median = (a) => {
 const INCOME_MARKS = [1, 10, 100, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8]
 
 // dépense les clés : l'amélioration la moins chère parmi celles achetables, à égalité l'ordre de priorité
-const PRIORITY = ['slots', 'charms', 'batch', 'income', 'discount', 'luck', 'shiny', 'gold', 'fusion', 'offline']
+const PRIORITY = ['slots', 'charms', 'batch', 'income', 'discount', 'smith', 'shiny', 'gold', 'fusion', 'offline']
 function spendKeys(s) {
   for (let guard = 0; guard < 500; guard++) {
     const options = UPGRADES.filter((u) => {

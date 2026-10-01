@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Coins, Zap } from 'lucide-react'
 import {
-  ENHANCE_RATES,
   ENHANCE_STEP,
   MAX_ENHANCE,
   RARITIES,
@@ -14,7 +13,7 @@ import {
   rarityClass,
   starsText,
 } from './data'
-import { formatNum } from './game'
+import { enhanceRate, formatNum } from './game'
 import { play } from './sound'
 
 const SPIN_MS = 3400 // durée du tour de roue (le résultat s'affiche à son arrêt)
@@ -87,7 +86,7 @@ export default function Forge({ startKey, liveState, onEnhance, onFreeze, onUnfr
   const owned = liveState.inventory[key] ?? 0
   const maxed = level >= MAX_ENHANCE
   const cost = maxed ? 0 : enhanceCost(item, tier, shiny, level)
-  const rate = maxed ? 0 : ENHANCE_RATES[level]
+  const rate = maxed ? 0 : enhanceRate(liveState, level)
   const canPay = liveState.gold >= cost
   const canTry = !busy && !maxed && owned > 0 && canPay
 

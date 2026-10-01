@@ -19,6 +19,7 @@ import {
   MAX_TIER,
   RARITY_ORDER,
   ENHANCE_RATES,
+  MAX_ENHANCE_RATE,
   MAX_ENHANCE,
   abilityValue,
   enhanceCost,
@@ -94,7 +95,10 @@ export const startSlots = () => BASE_SLOTS
 export const startGold = (s) => START_GOLD + upLevel(s, 'gold') * UPGRADE_STEP.gold
 
 export const startCharmSlots = () => BASE_CHARM_SLOTS
-export const charmSlotCost = (slots) => Math.round(500 * 2.5 ** (slots - BASE_CHARM_SLOTS))
+export const charmSlotCost = (slots) => Math.round(10_000 * 5 ** (slots - BASE_CHARM_SLOTS))
+
+// chance de réussite de la forge pour passer du niveau `level` au suivant, « Marteau de maître » compris
+export const enhanceRate = (s, level) => Math.min(MAX_ENHANCE_RATE, ENHANCE_RATES[level] + upLevel(s, 'smith') * UPGRADE_STEP.forge)
 export const isCharm = (key) => !!parseKey(key).item.ability
 // sac (or) ou talismans, selon la nature de l'objet
 export const bagOf = (s, key) => (isCharm(key) ? s.charms : s.equipped)
@@ -252,7 +256,6 @@ export function computeStats(s) {
     else bonus[ab.type] += v
   }
   // améliorations de prestige
-  bonus.luck += upLevel(s, 'luck') * UPGRADE_STEP.luck
   bonus.discount = Math.min(MAX_DISCOUNT, bonus.discount + upLevel(s, 'discount') * UPGRADE_STEP.discount)
   bonus.shiny = upLevel(s, 'shiny') * UPGRADE_STEP.shiny
   bonus.achievements = achievementBonus(s.achievements)
@@ -542,7 +545,7 @@ export function rollEnhance(s, key) {
   if (level >= MAX_ENHANCE || (s.inventory[key] ?? 0) < 1) return null
   const cost = enhanceCost(item, tier, shiny, level)
   if (s.gold < cost) return null
-  return { key, cost, success: Math.random() < ENHANCE_RATES[level], level }
+  return { key, cost, success: Math.random() < enhanceRate(s, level), level }
 }
 
 // applique la tentative : l'or est dépensé ; en cas d'échec l'exemplaire est perdu, sinon il passe au niveau +1

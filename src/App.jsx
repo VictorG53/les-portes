@@ -6,7 +6,6 @@ import {
 } from 'lucide-react'
 import {
   DOORS,
-  ENHANCE_RATES,
   ITEMS,
   MAX_ENHANCE,
   QUANTITIES,
@@ -38,6 +37,7 @@ import {
   equippedCount,
   formatMult,
   formatNum,
+  enhanceRate,
   fuseCount,
   isCharm,
   maxBatch,
@@ -909,7 +909,7 @@ export default function App() {
                   ? `Fusion : ${fc} identiques → 1 objet ${starsText(tier + 1)} (revenu ×${TIER_MULT})`
                   : 'Niveau maximum atteint',
                 level < MAX_ENHANCE
-                  ? `Forge (⚒) : tenter +${level + 1}, ${Math.round(ENHANCE_RATES[level] * 100)} % de réussite`
+                  ? `Forge (⚒) : tenter +${level + 1}, ${Math.round(enhanceRate(state, level) * 100)} % de réussite`
                   : 'Amélioration maximale atteinte',
               ]
               const hint = canEquip

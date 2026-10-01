@@ -1,4 +1,4 @@
-import { Backpack, Clover, Coins, Gem, Hammer, Layers, Moon, Sparkles, Tag, Wallet } from 'lucide-react'
+import { Anvil, Backpack, Coins, Gem, Hammer, Layers, Moon, Sparkles, Tag, Wallet } from 'lucide-react'
 import { formatMult } from './format'
 export const RARITIES = {
   commun: { label: 'Commun', color: '#a8b0b8', income: 0.1 },
@@ -277,7 +277,7 @@ export const starsText = (tier) => (tier <= 2 ? '★'.repeat(tier) : `★${tier}
 export const TIER_MULT = 3
 
 // --- shiny : version brillante d'un objet, rare, qui rapporte plus ---
-export const SHINY_CHANCE = 0.025
+export const SHINY_CHANCE = 0.005
 export const SHINY_MULT = 1.5
 const shinyMult = (shiny) => (shiny ? SHINY_MULT : 1)
 
@@ -285,6 +285,7 @@ const shinyMult = (shiny) => (shiny ? SHINY_MULT : 1)
 export const MAX_ENHANCE = 5
 export const ENHANCE_STEP = 0.5 // +50 % de revenu (ou d'effet) par niveau
 export const ENHANCE_RATES = [0.9, 0.8, 0.65, 0.5, 0.35] // chances de réussite de +0→+1, +1→+2, etc.
+export const MAX_ENHANCE_RATE = 0.97
 const ENHANCE_COST_FACTOR = 40 // coût = revenu de l'objet × 40 × (niveau + 1)
 const enhanceMult = (level) => 1 + ENHANCE_STEP * level
 
@@ -356,14 +357,14 @@ export function abilityText(item, tier, shiny = false, level = 0) {
 }
 
 // --- prestige : on recommence contre des clés, qui donnent des bonus permanents ---
-export const PRESTIGE_BASE = 5_000_000 // or gagné (dans la partie) pour la première clé
+export const PRESTIGE_BASE = 20_000_000 // or gagné (dans la partie) pour la première clé
 // bonus de revenu des clés gagnées au total : 1 + KEY_BONUS × clés^KEY_EXPONENT (croissance ralentie)
 const KEY_BONUS = 0.1
 const KEY_EXPONENT = 0.5
 export const keyMultiplier = (totalKeys) => 1 + KEY_BONUS * totalKeys ** KEY_EXPONENT
 // Paliers géométriques : la 1re clé arrive à PRESTIGE_BASE d'or gagné, chaque clé suivante demande
 // PRESTIGE_STEP fois plus d'or que la précédente (n clés = PRESTIGE_BASE × PRESTIGE_STEP^(n-1)).
-const PRESTIGE_STEP = 1.8
+const PRESTIGE_STEP = 2.3
 export const prestigeGain = (runEarned) =>
   runEarned < PRESTIGE_BASE ? 0 : Math.floor(Math.log(runEarned / PRESTIGE_BASE) / Math.log(PRESTIGE_STEP) + 1e-9) + 1
 // or à avoir gagné pour obtenir la clé suivante (quand on en a déjà `gain`)
@@ -383,7 +384,7 @@ export const OFFLINE_BASE_HOURS = 2
 export const OFFLINE_STEP_RATE = 0.05 // par niveau de « Sommeil profond »
 export const OFFLINE_STEP_HOURS = 0.5
 
-export const UPGRADE_STEP = { income: 0.25, luck: 0.05, discount: 0.03, shiny: 0.005, gold: 400 }
+export const UPGRADE_STEP = { income: 0.25, forge: 0.03, discount: 0.03, shiny: 0.005, gold: 400 }
 
 // niveau actuel l -> coût du niveau suivant ; effect(l) décrit l'effet au niveau l
 export const UPGRADES = [
@@ -408,9 +409,9 @@ export const UPGRADES = [
     effect: (l) => `+${l * UPGRADE_STEP.gold} or au départ de chaque partie`,
   },
   {
-    id: 'luck', icon: Clover, name: 'Baraka', max: 10,
+    id: 'smith', icon: Anvil, name: 'Marteau de maître', max: 10,
     cost: (l) => 3 + 2 * l,
-    effect: (l) => `+${Math.round(l * UPGRADE_STEP.luck * 100)}% de chances Légendaire ou mieux`,
+    effect: (l) => `+${Math.round(l * UPGRADE_STEP.forge * 100)} pts de réussite à la forge`,
   },
   {
     id: 'discount', icon: Tag, name: 'Négociateur', max: 10,
